@@ -14,6 +14,27 @@ export function getRealTodayDate(): string {
   return `${year}-${month}-${day}`;
 }
 
+export function getRealLocalDateTimeStr(date: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const y = date.getFullYear();
+  const m = pad(date.getMonth() + 1);
+  const d = pad(date.getDate());
+  const hh = pad(date.getHours());
+  const mm = pad(date.getMinutes());
+  const ss = pad(date.getSeconds());
+  return `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
+}
+
+export function parseLocalTimeString(str: string | null | undefined): Date {
+  if (!str) return new Date();
+  const [datePart, timePart] = str.trim().split(' ');
+  if (!datePart) return new Date();
+  const [y, m, d] = datePart.split('-').map(Number);
+  const [hh, mm, ss] = (timePart || '00:00:00').split(':').map(Number);
+  if (isNaN(y) || isNaN(m) || isNaN(d)) return new Date();
+  return new Date(y, m - 1, d, hh || 0, mm || 0, ss || 0);
+}
+
 export function getRealDateWithOffset(offsetDays: number = 1): string {
   const target = new Date();
   target.setDate(target.getDate() + offsetDays);

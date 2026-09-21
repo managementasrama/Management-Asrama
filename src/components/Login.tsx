@@ -66,71 +66,71 @@ export function Login() {
       <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-hajj-700/40 blur-3xl pointer-events-none"></div>
       <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-gold-500/25 blur-3xl pointer-events-none"></div>
 
-      <div className="w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden border border-gold-500/40 relative z-10 my-4 sm:my-8">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-gold-500/40 relative z-10 my-2 sm:my-4">
         {/* Official Header Banner - Kementerian Haji dan Umrah RI */}
-        <div className="bg-gradient-to-b from-hajj-900 via-hajj-800 to-hajj-900 p-6 sm:p-8 text-white text-center relative border-b-4 border-gold-500">
-          <div className="flex items-center justify-center space-x-3 mb-3">
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-md overflow-hidden shrink-0 text-2xl font-black ${appSettings?.appLogo && appSettings.appLogo.startsWith('data:') ? 'bg-transparent border-0 shadow-none' : 'bg-gradient-to-br from-gold-400 via-gold-500 to-gold-600 text-hajj-950 border-2 border-gold-300'}`}>
+        <div className="bg-gradient-to-b from-hajj-900 via-hajj-800 to-hajj-900 px-5 py-5 sm:px-6 sm:py-6 text-white text-center relative border-b-4 border-gold-500">
+          <div className="flex items-center justify-center mb-3">
+            <div className={`w-24 h-24 sm:w-28 sm:h-28 rounded-2xl flex items-center justify-center shadow-lg overflow-hidden shrink-0 transition-transform ${appSettings?.appLogo && appSettings.appLogo.startsWith('data:') ? 'bg-white/10 backdrop-blur-xs p-1.5 border border-gold-400/30' : 'bg-gradient-to-br from-gold-400 via-gold-500 to-gold-600 text-hajj-950 border-2 border-gold-300 shadow-gold-500/20'}`}>
               {appSettings?.appLogo && appSettings.appLogo.startsWith('data:') ? (
-                <img src={appSettings.appLogo} alt="Logo" className="w-full h-full object-contain" />
+                <img src={appSettings.appLogo} alt="Logo Asrama Haji" className="w-full h-full object-contain filter drop-shadow" />
               ) : (
-                <i className={`fa-solid ${appSettings?.appLogo || 'fa-kaaba'}`}></i>
+                <i className={`fa-solid ${appSettings?.appLogo || 'fa-kaaba'} text-4xl sm:text-5xl`}></i>
               )}
             </div>
           </div>
           
-          <span className="text-[10px] sm:text-[11px] uppercase tracking-widest text-gold-300 font-extrabold bg-gold-400/15 border border-gold-400/40 px-3.5 py-1 rounded-full inline-block mb-2">
+          <span className="text-[9px] sm:text-[10px] uppercase tracking-wider text-gold-300 font-extrabold bg-gold-400/15 border border-gold-400/40 px-3 py-0.5 rounded-full inline-block mb-1.5">
             {appSettings?.ministryName || 'KEMENTERIAN HAJI DAN UMRAH REPUBLIK INDONESIA'}
           </span>
-          <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-snug">
+          <h1 className="text-lg sm:text-xl font-black text-white tracking-tight leading-snug">
             {appSettings?.organizationName || 'UPT ASRAMA HAJI JAKARTA'}
           </h1>
-          <p className="text-xs text-gold-100/90 mt-1 font-medium max-w-md mx-auto">
-            {appSettings?.subTitle || 'Sistem Informasi Operasional & Manajemen Pelayanan Terpadu (SIM-HAJI)'}
+          <p className="text-[11px] text-gold-100/90 mt-0.5 font-medium max-w-xs mx-auto">
+            {appSettings?.subTitle || 'Sistem Informasi Manajemen Operasional Terpadu & Hunian'}
           </p>
         </div>
 
         {/* Login Form Container */}
-        <div className="p-6 sm:p-8 space-y-5 bg-white">
-          <form onSubmit={executeLogin} className="space-y-4">
+        <div className="p-5 sm:p-6 space-y-4 bg-white">
+          <form onSubmit={executeLogin} className="space-y-3.5">
             <div>
-              <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
+              <label className="block text-[11px] font-bold text-slate-800 uppercase tracking-wider mb-1">
                 Username / NIP Petugas
               </label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <i className="fa-solid fa-id-card-clip text-sm"></i>
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <i className="fa-solid fa-id-card-clip text-xs"></i>
                 </span>
                 <input 
                   type="text" 
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required 
-                  className="w-full pl-10 pr-3 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-hajj-600 focus:border-hajj-600 focus:bg-white outline-none transition font-medium text-slate-900" 
+                  className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-hajj-600 focus:border-hajj-600 focus:bg-white outline-none transition font-medium text-slate-900" 
                   placeholder="Masukkan username (contoh: superadmin atau admin)" 
                 />
               </div>
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] font-bold text-slate-800 uppercase tracking-wider">
                   Kata Sandi
                 </label>
-                <span className="text-[11px] text-hajj-700 font-semibold hover:underline cursor-pointer">
+                <span className="text-[10px] text-hajj-700 font-semibold hover:underline cursor-pointer">
                   Default: 12345
                 </span>
               </div>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <i className="fa-solid fa-lock text-sm"></i>
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <i className="fa-solid fa-lock text-xs"></i>
                 </span>
                 <input 
                   type={showPassword ? 'text' : 'password'} 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required 
-                  className="w-full pl-10 pr-10 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-hajj-600 focus:border-hajj-600 focus:bg-white outline-none transition font-medium text-slate-900" 
+                  className="w-full pl-9 pr-9 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-hajj-600 focus:border-hajj-600 focus:bg-white outline-none transition font-medium text-slate-900" 
                   placeholder="Masukkan kata sandi (contoh: 12345)" 
                 />
                 <button
@@ -145,22 +145,22 @@ export function Login() {
             </div>
 
             <div className="flex items-center justify-between text-xs text-slate-600 pt-0.5">
-              <label className="flex items-center space-x-2 cursor-pointer select-none">
-                <input type="checkbox" defaultChecked className="rounded text-hajj-700 focus:ring-hajj-600 w-4 h-4" />
-                <span>Ingat sesi di perangkat ini</span>
+              <label className="flex items-center space-x-1.5 cursor-pointer select-none">
+                <input type="checkbox" defaultChecked className="rounded text-hajj-700 focus:ring-hajj-600 w-3.5 h-3.5" />
+                <span className="text-[11px]">Ingat sesi perangkat</span>
               </label>
               <div className="flex items-center space-x-1 text-emerald-700 font-semibold text-[11px]">
-                <i className="fa-solid fa-database"></i>
-                <span>Database Lokal Mandiri</span>
+                <i className="fa-solid fa-database text-[10px]"></i>
+                <span>Database Terpadu</span>
               </div>
             </div>
 
             <button 
               type="submit" 
-              className="w-full py-3 bg-gradient-to-r from-hajj-800 to-hajj-700 hover:from-hajj-900 hover:to-hajj-800 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center space-x-2 cursor-pointer mt-2"
+              className="w-full py-2.5 bg-gradient-to-r from-hajj-800 to-hajj-700 hover:from-hajj-900 hover:to-hajj-800 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center space-x-2 cursor-pointer mt-1"
             >
               <span>Masuk Portal SIM-HAJI</span>
-              <i className="fa-solid fa-arrow-right-to-bracket text-gold-300"></i>
+              <i className="fa-solid fa-arrow-right-to-bracket text-gold-300 text-xs"></i>
             </button>
           </form>
 

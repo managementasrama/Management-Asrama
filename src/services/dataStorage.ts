@@ -86,7 +86,7 @@ export const defaultAppSettings: AppSettings = {
   portalUrl: 'https://asramahajijakarta.id'
 };
 
-export function generateInitialDatabase(onlyAdmin: boolean = true): CompleteStorageDatabase {
+export function generateInitialDatabase(onlyAdmin: boolean = false): CompleteStorageDatabase {
   const usersList = onlyAdmin
     ? initialUsers.filter(u => u.role === 'Super Admin' || u.role === 'Admin' || u.username.toLowerCase() === 'superadmin' || u.username.toLowerCase() === 'admin')
     : [...initialUsers];
@@ -268,24 +268,25 @@ export class DataStorageService {
         if (stored) {
           const parsed = JSON.parse(stored) as Partial<CompleteStorageDatabase>;
           if (parsed && Array.isArray(parsed.rooms)) {
-            // FILTER KETAT PENGGUNA: Sisakan HANYA akun Super Admin dan Admin
-            const validAdminUsers = (parsed.users || []).filter(u => 
-              u.role === 'Super Admin' || 
-              u.role === 'Admin' || 
-              u.username.toLowerCase() === 'superadmin' || 
-              u.username.toLowerCase() === 'admin'
-            );
-
-            const finalUsers: User[] = [...validAdminUsers];
-            // Pastikan akun Super Admin ada
-            if (!finalUsers.some(u => u.role === 'Super Admin' || u.username.toLowerCase() === 'superadmin')) {
-              finalUsers.unshift(initialUsers[0]);
-            }
-            // Pastikan akun Admin ada
-            if (!finalUsers.some(u => u.role === 'Admin' || u.username.toLowerCase() === 'admin')) {
-              finalUsers.push(initialUsers[1]);
-            }
-            parsed.users = finalUsers;
+            // SINKRONISASI PENGGUNA TERBARU: Pertahankan semua akun tersimpan dan sertakan akun master resmi UPT
+            const existingUsers = Array.isArray(parsed.users) ? parsed.users : [];
+            const mergedUsers = [...existingUsers];
+            
+            initialUsers.forEach(initUser => {
+              const idx = mergedUsers.findIndex(u => u.id === initUser.id || u.username.toLowerCase() === initUser.username.toLowerCase());
+              if (idx === -1) {
+                mergedUsers.push(initUser);
+              } else {
+                mergedUsers[idx] = {
+                  ...initUser,
+                  ...mergedUsers[idx],
+                  role: mergedUsers[idx].role || initUser.role,
+                  department: mergedUsers[idx].department || initUser.department,
+                  status: mergedUsers[idx].status || initUser.status
+                };
+              }
+            });
+            parsed.users = mergedUsers;
 
             // BERSIHKAN SEMUA DATA DUMMY (Transaksi dummy, Maintenance dummy, QC dummy, Log aktivitas, Shift, dsb)
             if (!parsed.schemaVersion || parsed.schemaVersion < 4) {

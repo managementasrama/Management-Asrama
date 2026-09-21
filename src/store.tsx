@@ -17,7 +17,7 @@ import {
 import { initialUsers, getInitialRooms, initialTransactions, initialMaintenances, initialAuditLogs, initialWorkSessions, initialQcInspections, initialBuildings, initialMeetingRooms } from './data';
 import { initialChatChannels, initialChatMessages } from './chatData';
 import { playNotificationSound } from './lib/sound';
-import { getRealTodayDate, formatIndonesianDate, addDaysToDateStr, getTxDays } from './lib/utils';
+import { getRealTodayDate, formatIndonesianDate, addDaysToDateStr, getTxDays, getRealLocalDateTimeStr, parseLocalTimeString } from './lib/utils';
 import { dataStorage, DataStorageService, StorageNamespace, AppSettings } from './services/dataStorage';
 import { useBodyScrollLock } from './lib/scrollLock';
 
@@ -75,6 +75,7 @@ interface AppContextType {
   workSessions: WorkSession[];
   qcInspections: QcInspection[];
   activeSessionId: string | null;
+  clearWorkSessions: () => void;
   activeTab: string;
   toasts: { id: string, msg: string, type: string }[];
   modalState: { [key: string]: any };
@@ -188,7 +189,26 @@ const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [storageNamespace, setStorageNamespace] = useState<StorageNamespace>(() => dataStorage.getNamespace());
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    try {
+      const saved = localStorage.getItem('sim_haji_current_user');
+      if (saved) {
+        const u = JSON.parse(saved);
+        if (u && u.id) return u;
+      }
+    } catch (_) {}
+    return null;
+  });
+
+  useEffect(() => {
+    try {
+      if (currentUser) {
+        localStorage.setItem('sim_haji_current_user', JSON.stringify(currentUser));
+      } else {
+        localStorage.removeItem('sim_haji_current_user');
+      }
+    } catch (_) {}
+  }, [currentUser]);
   const [users, setUsers] = useState<User[]>(() => dataStorage.getUsers());
   const [buildings, setBuildings] = useState<Building[]>(() => dataStorage.getBuildings());
   const [meetingRooms, setMeetingRooms] = useState<MeetingRoom[]>(() => dataStorage.getMeetingRooms());
@@ -725,8 +745,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const login = (user: User, _preferNamespace?: StorageNamespace) => {
     setCurrentUser(user);
     const now = new Date();
-    const loginTimeStr = now.toISOString().replace('T', ' ').substring(0, 19);
-    setLoginTime(now.getTime());
+    const loginTimeStr = getRealLocalDateTimeStr(now);
+
+    // Periksa apakah pengguna ini sudah memiliki sesi AKTIF yang belum ditutup
+    const existingActive = workSessions.find(
+      s => s.userId === user.id && s.status === 'AKTIF' && !s.logoutTime
+    );
+
+    if (existingActive) {
+      // Lanjutkan sesi aktif yang sudah ada tanpa membuat duplikat sesi baru
+      setActiveSessionId(existingActive.id);
+      const parsedStart = parseLocalTimeString(existingActive.loginTime).getTime();
+      setLoginTime(parsedStart);
+      logAudit(
+        "Login System", 
+        `Petugas ${user.fullName} (${user.role}) melanjutkan sesi kerja aktif (${existingActive.id})`
+      );
+      showToast(`Melanjutkan sesi aktif, ${user.fullName} (${user.role})!`, "success");
+      setActiveTab('dashboard');
+      return;
+    }
+
+    const nowMs = now.getTime();
+    setLoginTime(nowMs);
 
     const newSessionId = `SESI-${Date.now().toString().slice(-4)}`;
     setActiveSessionId(newSessionId);
@@ -739,12 +780,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
       loginTime: loginTimeStr,
       logoutTime: null,
       durationSeconds: 0,
-      durationFormatted: 'Sedang Berjalan (Aktif)',
+      durationFormatted: '0 Jam 0 Menit 0 Detik (Sedang Berjalan)',
       status: 'AKTIF',
       notes: `Sesi login petugas (${user.role} - ${user.department || 'Operasional'})`
     };
 
-    setWorkSessions(prev => [newSession, ...prev]);
+    setWorkSessions(prev => {
+      // Tutup sesi aktif lain yang mungkin tertinggal dari akun yang sama
+      const sanitized = prev.map(s => {
+        if (s.userId === user.id && s.status === 'AKTIF') {
+          const sTime = parseLocalTimeString(s.loginTime).getTime();
+          const sDur = Math.max(1, Math.floor((nowMs - sTime) / 1000));
+          return {
+            ...s,
+            status: 'SELESAI' as const,
+            logoutTime: loginTimeStr,
+            durationSeconds: sDur,
+            durationFormatted: formatHMS(sDur)
+          };
+        }
+        return s;
+      });
+      return [newSession, ...sanitized];
+    });
+
     logAudit(
       "Login System", 
       `Petugas ${user.fullName} (${user.role}) masuk bertugas pada ${loginTimeStr}`
@@ -759,23 +818,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     if (currentUser) {
       const now = new Date();
-      const logoutTimeStr = now.toISOString().replace('T', ' ').substring(0, 19);
+      const logoutTimeStr = getRealLocalDateTimeStr(now);
+      const nowMs = now.getTime();
       let totalSeconds = 0;
       let durationStr = "0 Jam 0 Menit 0 Detik";
 
-      if (loginTime) {
-        totalSeconds = Math.max(1, Math.floor((now.getTime() - loginTime) / 1000));
-        durationStr = formatHMS(totalSeconds);
-      }
-
       setWorkSessions(prev => prev.map(s => {
         if (s.id === activeSessionId || (s.userId === currentUser.id && s.status === 'AKTIF')) {
+          const sTime = parseLocalTimeString(s.loginTime).getTime();
+          const sDur = Math.max(1, Math.floor((nowMs - sTime) / 1000));
+          const sFormatted = formatHMS(sDur);
+          totalSeconds = sDur;
+          durationStr = sFormatted;
           return {
             ...s,
             logoutTime: logoutTimeStr,
-            durationSeconds: totalSeconds,
-            durationFormatted: durationStr,
-            status: 'SELESAI'
+            durationSeconds: sDur,
+            durationFormatted: sFormatted,
+            status: 'SELESAI' as const
           };
         }
         return s;
@@ -791,7 +851,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCurrentUser(null);
     setLoginTime(null);
     setActiveSessionId(null);
+    try {
+      localStorage.removeItem('sim_haji_current_user');
+      localStorage.removeItem('sim_haji_active_session_id');
+    } catch (_) {}
     showToast("Anda telah keluar dari sistem (Check-Out Shift).", "info");
+  };
+
+  const clearWorkSessions = () => {
+    setWorkSessions([]);
+    setActiveSessionId(null);
+    setLoginTime(null);
+    logAudit("Reset Sesi Kerja", "Daftar rekap riwayat sesi & jam kerja petugas telah dibersihkan.");
+    showToast("Rekap sesi dan jam kerja berhasil direset!", "success");
   };
 
   const addUser = (user: User) => {
@@ -1860,7 +1932,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       openChat, closeChat, setActiveChatChannelId: handleSetActiveChatChannelId, toggleChatSound, sendChatMessage,
       markChannelAsRead, dismissChatNotification, simulateIncomingChatMessage,
       clearChatHistory, addChatChannel, deleteChatChannel,
-      login, logout, setActiveTab, addUser, updateUser, toggleUserStatus, deleteUser, addTransaction, addGroupBooking, updateGroupBooking, updateTransaction, updateBreakfastStatus, checkoutRoom, activateCheckin, cancelBooking, extendTransaction, batchCheckinGroup, batchCheckoutGroup,
+      login, logout, clearWorkSessions, setActiveTab, addUser, updateUser, toggleUserStatus, deleteUser, addTransaction, addGroupBooking, updateGroupBooking, updateTransaction, updateBreakfastStatus, checkoutRoom, activateCheckin, cancelBooking, extendTransaction, batchCheckinGroup, batchCheckoutGroup,
       addMaintenance, assignTechnicianToMaintenance, markMaintenanceRepaired, updateMaintenanceStatus, finishMaintenance, addQcInspection, logAudit, showToast, removeToast, openModal, closeModal,
       supabaseSyncState, manualSyncSupabase, pushAllToSupabase,
       dataStorage, exportDatabaseBackup, importDatabaseBackup, resetDatabase

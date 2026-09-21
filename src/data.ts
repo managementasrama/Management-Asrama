@@ -9,7 +9,7 @@ export const OFFICIAL_TARIFFS: Record<string, any> = {
     "Ruang Pertemuan": { category: "AULA", capacity: "100 - 1500 Orang", desc: "Sewa per Hari / Acara" }
 };
 
-// Master Users: Hanya akun Super Admin dan Admin sebagai default sistem
+// Master Users: Akun Resmi Petugas Terpadu SIM-HAJI UPT Asrama Haji Jakarta
 export const initialUsers: User[] = [
     { 
         id: 'u-superadmin', 
@@ -33,6 +33,102 @@ export const initialUsers: User[] = [
         supervisorId: null,
         assignedBuilding: 'Semua Gedung', 
         phone: '081233334444', 
+        status: 'Aktif' 
+    },
+    {
+        id: 'u-mgr-resepsionis',
+        username: 'mgr_resepsionis',
+        fullName: 'Nurul Hidayah, S.Sos (Manager Resepsionis)',
+        role: 'Manager Resepsionis',
+        password: '12345',
+        department: 'Pelayanan & Resepsionis',
+        supervisorId: 'u-admin',
+        assignedBuilding: 'Semua Gedung',
+        phone: '081255556666',
+        status: 'Aktif'
+    },
+    { 
+        id: 'u-resepsionis', 
+        username: 'resepsionis', 
+        fullName: 'Siti Rahmawati (Resepsionis)', 
+        role: 'Resepsionis', 
+        password: '12345',
+        department: 'Pelayanan & Resepsionis',
+        supervisorId: 'u-mgr-resepsionis',
+        assignedBuilding: 'Semua Gedung', 
+        phone: '081277778888', 
+        status: 'Aktif' 
+    },
+    {
+        id: 'u-mgr-qc',
+        username: 'mgr_qc',
+        fullName: 'Ir. Bambang Tri (Manager QC)',
+        role: 'Manager QC',
+        password: '12345',
+        department: 'Pengawasan Mutu & QC',
+        supervisorId: 'u-admin',
+        assignedBuilding: 'Semua Gedung',
+        phone: '081288889999',
+        status: 'Aktif'
+    },
+    { 
+        id: 'u-qc', 
+        username: 'qc', 
+        fullName: 'Hendra Pratama (Quality Control)', 
+        role: 'Quality Control', 
+        password: '12345',
+        department: 'Pengawasan Mutu & QC',
+        supervisorId: 'u-mgr-qc',
+        assignedBuilding: 'Semua Gedung', 
+        phone: '081311112222', 
+        status: 'Aktif' 
+    },
+    {
+        id: 'u-mgr-teknisi',
+        username: 'mgr_teknisi',
+        fullName: 'Agus Setiawan, S.T. (Manager Teknisi)',
+        role: 'Manager Teknisi',
+        password: '12345',
+        department: 'Pemeliharaan Fasilitas & Teknisi',
+        supervisorId: 'u-admin',
+        assignedBuilding: 'Semua Gedung',
+        phone: '081333334444',
+        status: 'Aktif'
+    },
+    { 
+        id: 'u-teknisi', 
+        username: 'teknisi', 
+        fullName: 'Joko Susilo (Teknisi Sarpras)', 
+        role: 'Teknisi', 
+        password: '12345',
+        department: 'Pemeliharaan Fasilitas & Teknisi',
+        supervisorId: 'u-mgr-teknisi',
+        assignedBuilding: 'Semua Gedung', 
+        phone: '081355556666', 
+        status: 'Aktif' 
+    },
+    {
+        id: 'u-mgr-koperasi',
+        username: 'mgr_koperasi',
+        fullName: 'Hj. Fatimah, S.E. (Manager Koperasi)',
+        role: 'Manager Koperasi',
+        password: '12345',
+        department: 'Koperasi, Dapur & Konsumsi',
+        supervisorId: 'u-admin',
+        assignedBuilding: 'Dapur & Distribusi Sarapan',
+        phone: '081377778888',
+        status: 'Aktif'
+    },
+    { 
+        id: 'u-koperasi', 
+        username: 'koperasi', 
+        fullName: 'Dewi Lestari (Petugas Koperasi)', 
+        role: 'Petugas Koperasi', 
+        password: '12345',
+        department: 'Koperasi, Dapur & Konsumsi',
+        supervisorId: 'u-mgr-koperasi',
+        assignedBuilding: 'Dapur & Distribusi Sarapan', 
+        phone: '081399990000', 
         status: 'Aktif' 
     }
 ];

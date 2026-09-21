@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAppContext, formatHMS, isTeknisiRole, isManagerTeknisi, isManagerQc, isKoperasiRole, isRecepRole, isQcRole, isSuperAdmin } from '../store';
-import { formatIndonesianDate, addDaysToDateStr, getRealTodayDate, formatIndonesianDateTime } from '../lib/utils';
+import { formatIndonesianDate, addDaysToDateStr, getRealTodayDate, formatIndonesianDateTime, parseLocalTimeString } from '../lib/utils';
 import { Transaction, Maintenance, WorkSession, BreakfastMenuItem, BreakfastOrder } from '../types';
 import { consolidateGroupTransactions } from '../lib/reportExporter';
 import { useBodyScrollLock } from '../lib/scrollLock';
@@ -2270,7 +2270,7 @@ export function BreakfastOrdersView() {
 export function AuditLogView({ defaultSubView }: { defaultSubView?: 'WORK_SESSIONS' | 'AUDIT_TRAIL' | 'DATABASE_MGMT' } = {}) {
   const { 
     auditLogs = [], workSessions = [], currentUser, showToast, openModal,
-    exportDatabaseBackup, importDatabaseBackup, resetDatabase,
+    exportDatabaseBackup, importDatabaseBackup, resetDatabase, clearWorkSessions,
     rooms = [], transactions = [], maintenances = [], users = [],
     breakfastOrders = [], breakfastMenuItems = [], qcInspections = [],
     supabaseSyncState, manualSyncSupabase, pushAllToSupabase
@@ -2307,9 +2307,10 @@ export function AuditLogView({ defaultSubView }: { defaultSubView?: 'WORK_SESSIO
     }
   }, [defaultSubView]);
 
-  // Modal konfirmasi Reset Database (menghindari pemblokiran window.confirm dalam sandbox iframe)
+  // Modal konfirmasi Reset Database & Reset Sesi
   const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
-  useBodyScrollLock(showResetConfirmModal);
+  const [showResetSessionsModal, setShowResetSessionsModal] = useState(false);
+  useBodyScrollLock(showResetConfirmModal || showResetSessionsModal);
   
   // Audit Trail Filters
   const [auditActionFilter, setAuditActionFilter] = useState<string>('SEMUA');
@@ -2337,7 +2338,7 @@ export function AuditLogView({ defaultSubView }: { defaultSubView?: 'WORK_SESSIO
   const sessionsWithLiveDuration = useMemo(() => {
     return safeWorkSessions.map(session => {
       if (session.status === 'AKTIF') {
-        const loginDate = new Date(session.loginTime.replace(' ', 'T'));
+        const loginDate = parseLocalTimeString(session.loginTime);
         const now = new Date();
         const diffSeconds = Math.max(0, Math.floor((now.getTime() - loginDate.getTime()) / 1000));
         return {
@@ -2748,14 +2749,26 @@ export function AuditLogView({ defaultSubView }: { defaultSubView?: 'WORK_SESSIO
           )}
         </div>
 
-        <button
-          onClick={() => openModal('modalExport', { defaultType: activeSubView === 'WORK_SESSIONS' ? 'JAM_KERJA' : 'AUDIT' })}
-          className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs flex items-center space-x-2 transition self-start sm:self-auto"
-          title="Unduh Laporan Resmi (PDF & Excel .xlsx)"
-        >
-          <i className="fa-solid fa-file-arrow-down"></i>
-          <span>Unduh Laporan ({activeSubView === 'WORK_SESSIONS' ? 'Jam Kerja' : 'Audit'})</span>
-        </button>
+        <div className="flex items-center space-x-2 self-start sm:self-auto">
+          {safeWorkSessions.length > 0 && isSuperAdmin(currentUser?.role) && activeSubView === 'WORK_SESSIONS' && (
+            <button
+              onClick={() => setShowResetSessionsModal(true)}
+              className="px-3 py-2 bg-slate-100 hover:bg-amber-50 text-slate-600 hover:text-amber-800 text-xs font-bold rounded-xl border border-slate-200 hover:border-amber-200 flex items-center space-x-1.5 transition cursor-pointer"
+              title="Bersihkan riwayat rekap sesi & jam kerja"
+            >
+              <i className="fa-solid fa-broom text-xs"></i>
+              <span className="hidden sm:inline">Reset Sesi</span>
+            </button>
+          )}
+          <button
+            onClick={() => openModal('modalExport', { defaultType: activeSubView === 'WORK_SESSIONS' ? 'JAM_KERJA' : 'AUDIT' })}
+            className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs flex items-center space-x-2 transition"
+            title="Unduh Laporan Resmi (PDF & Excel .xlsx)"
+          >
+            <i className="fa-solid fa-file-arrow-down"></i>
+            <span>Unduh Laporan ({activeSubView === 'WORK_SESSIONS' ? 'Jam Kerja' : 'Audit'})</span>
+          </button>
+        </div>
       </div>
 
       {activeSubView === 'WORK_SESSIONS' ? (
@@ -3885,6 +3898,52 @@ ON public.app_database_sync FOR ALL TO anon USING (true) WITH CHECK (true);`);
               >
                 <i className="fa-solid fa-rotate-left"></i>
                 <span>Reset Database</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Reset Rekap Sesi Kerja */}
+      {showResetSessionsModal && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-slate-200">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-xl shrink-0">
+                <i className="fa-solid fa-broom"></i>
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-900 text-base">Reset Rekap Sesi Kerja</h4>
+                <p className="text-xs text-slate-500">Bersihkan seluruh riwayat shift &amp; durasi lama</p>
+              </div>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 space-y-1.5">
+              <p className="font-bold">Apakah Anda yakin ingin mengosongkan riwayat sesi &amp; jam kerja?</p>
+              <p className="text-slate-600 text-[11px]">
+                Semua entri sesi lama yang tidak wajar atau duplikat akan dibersihkan. Catatan sesi baru akan mulai dihitung bersih dan akurat sejak waktu login terkini.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowResetSessionsModal(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                id="btn-confirm-reset-sessions"
+                onClick={() => {
+                  clearWorkSessions();
+                  setShowResetSessionsModal(false);
+                }}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl transition flex items-center space-x-1.5 cursor-pointer shadow-sm"
+              >
+                <i className="fa-solid fa-check"></i>
+                <span>Ya, Bersihkan Sesi</span>
               </button>
             </div>
           </div>
