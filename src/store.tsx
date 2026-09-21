@@ -116,7 +116,7 @@ interface AppContextType {
   dismissChatNotification: () => void;
   simulateIncomingChatMessage: (channelId?: string) => void;
   
-  login: (user: User, preferNamespace?: StorageNamespace) => void;
+  login: (user: User, preferNamespace?: StorageNamespace, rememberDevice?: boolean) => void;
   logout: () => void;
   setActiveTab: (tab: string) => void;
   addUser: (user: User) => void;
@@ -191,10 +191,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [storageNamespace, setStorageNamespace] = useState<StorageNamespace>(() => dataStorage.getNamespace());
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
-      const saved = localStorage.getItem('sim_haji_current_user');
-      if (saved) {
-        const u = JSON.parse(saved);
+      // Periksa sessionStorage terlebih dahulu (sesi tab browser aktif)
+      const sessionSaved = sessionStorage.getItem('sim_haji_current_user');
+      if (sessionSaved) {
+        const u = JSON.parse(sessionSaved);
         if (u && u.id) return u;
+      }
+      // Periksa localStorage HANYA jika fitur Ingat Sesi aktif (default: true)
+      const isRemember = localStorage.getItem('sim_haji_remember_session');
+      if (isRemember !== 'false') {
+        const localSaved = localStorage.getItem('sim_haji_current_user');
+        if (localSaved) {
+          const u = JSON.parse(localSaved);
+          if (u && u.id) return u;
+        }
       }
     } catch (_) {}
     return null;
@@ -203,9 +213,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       if (currentUser) {
-        localStorage.setItem('sim_haji_current_user', JSON.stringify(currentUser));
+        sessionStorage.setItem('sim_haji_current_user', JSON.stringify(currentUser));
+        const isRemember = localStorage.getItem('sim_haji_remember_session');
+        if (isRemember !== 'false') {
+          localStorage.setItem('sim_haji_current_user', JSON.stringify(currentUser));
+        } else {
+          localStorage.removeItem('sim_haji_current_user');
+        }
       } else {
         localStorage.removeItem('sim_haji_current_user');
+        sessionStorage.removeItem('sim_haji_current_user');
       }
     } catch (_) {}
   }, [currentUser]);
@@ -742,7 +759,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }, ...prev]);
   };
 
-  const login = (user: User, _preferNamespace?: StorageNamespace) => {
+  const login = (user: User, _preferNamespace?: StorageNamespace, rememberDevice: boolean = true) => {
+    try {
+      if (rememberDevice) {
+        localStorage.setItem('sim_haji_remember_session', 'true');
+        localStorage.setItem('sim_haji_current_user', JSON.stringify(user));
+        sessionStorage.setItem('sim_haji_current_user', JSON.stringify(user));
+      } else {
+        localStorage.setItem('sim_haji_remember_session', 'false');
+        localStorage.removeItem('sim_haji_current_user');
+        sessionStorage.setItem('sim_haji_current_user', JSON.stringify(user));
+      }
+    } catch (_) {}
+
     setCurrentUser(user);
     const now = new Date();
     const loginTimeStr = getRealLocalDateTimeStr(now);
@@ -853,6 +882,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setActiveSessionId(null);
     try {
       localStorage.removeItem('sim_haji_current_user');
+      sessionStorage.removeItem('sim_haji_current_user');
       localStorage.removeItem('sim_haji_active_session_id');
     } catch (_) {}
     showToast("Anda telah keluar dari sistem (Check-Out Shift).", "info");
