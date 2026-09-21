@@ -11,7 +11,8 @@ import {
   BreakfastMenuItem, 
   BreakfastOrder,
   Building,
-  MeetingRoom
+  MeetingRoom,
+  PasswordResetRequest
 } from '../types';
 import { 
   initialUsers, 
@@ -74,6 +75,7 @@ export interface CompleteStorageDatabase {
   chatMessages: ChatMessage[];
   breakfastMenuItems: BreakfastMenuItem[];
   breakfastOrders: BreakfastOrder[];
+  passwordResetRequests?: PasswordResetRequest[];
 }
 
 export const defaultAppSettings: AppSettings = {
@@ -108,7 +110,8 @@ export function generateInitialDatabase(onlyAdmin: boolean = false): CompleteSto
     chatChannels: [...initialChatChannels],
     chatMessages: [],
     breakfastMenuItems: [...initialBreakfastMenuItems],
-    breakfastOrders: []
+    breakfastOrders: [],
+    passwordResetRequests: []
   };
 }
 
@@ -342,6 +345,10 @@ export class DataStorageService {
 
             if (!Array.isArray(parsed.chatMessages)) {
               parsed.chatMessages = [];
+            }
+
+            if (!Array.isArray(parsed.passwordResetRequests)) {
+              parsed.passwordResetRequests = [];
             }
 
             if (!parsed.appSettings || parsed.appSettings.address?.includes('Hankam') || parsed.appSettings.phone === '(021) 8094444') {
@@ -1028,6 +1035,32 @@ export class DataStorageService {
       }
     }
     return false;
+  }
+  public getPasswordResetRequests(): PasswordResetRequest[] {
+    const db = this.getDatabase();
+    return Array.isArray(db.passwordResetRequests) ? db.passwordResetRequests : [];
+  }
+
+  public savePasswordResetRequest(request: PasswordResetRequest): void {
+    const db = this.getDatabase();
+    const list = this.getPasswordResetRequests();
+    const idx = list.findIndex(r => r.id === request.id);
+    let updatedList: PasswordResetRequest[];
+    if (idx >= 0) {
+      updatedList = [...list];
+      updatedList[idx] = request;
+    } else {
+      updatedList = [request, ...list];
+    }
+    this.saveDatabase({ ...db, passwordResetRequests: updatedList });
+  }
+
+  public deletePasswordResetRequest(requestId: string): boolean {
+    const db = this.getDatabase();
+    const list = this.getPasswordResetRequests();
+    const filtered = list.filter(r => r.id !== requestId);
+    this.saveDatabase({ ...db, passwordResetRequests: filtered });
+    return true;
   }
 }
 

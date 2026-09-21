@@ -12,7 +12,9 @@ import {
   BreakfastMenuItem, 
   BreakfastOrder,
   Building,
-  MeetingRoom
+  MeetingRoom,
+  PasswordResetRequest,
+  UserRole
 } from './types';
 import { initialUsers, getInitialRooms, initialTransactions, initialMaintenances, initialAuditLogs, initialWorkSessions, initialQcInspections, initialBuildings, initialMeetingRooms } from './data';
 import { initialChatChannels, initialChatMessages } from './chatData';
@@ -183,6 +185,15 @@ interface AppContextType {
   clearChatHistory: (channelId?: string) => void;
   addChatChannel: (channel: ChatChannel) => void;
   deleteChatChannel: (channelId: string) => boolean;
+
+  // Account Registration & Password Reset Requests with Admin Approval
+  passwordResetRequests: PasswordResetRequest[];
+  requestPasswordReset: (username: string, newPassword: string, notes?: string) => { success: boolean; message: string };
+  approvePasswordReset: (requestId: string) => boolean;
+  rejectPasswordReset: (requestId: string, notes?: string) => boolean;
+  registerAccountRequest: (userData: { fullName: string; username: string; password?: string; role: UserRole; department?: string; phone: string; assignedBuilding?: string }) => { success: boolean; message: string };
+  approveUserRegistration: (userId: string) => boolean;
+  rejectUserRegistration: (userId: string) => boolean;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -264,6 +275,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activeChatChannelId, setActiveChatChannelId] = useState<string | null>(null);
   const [chatSoundEnabled, setChatSoundEnabled] = useState<boolean>(true);
   const [chatNotificationToast, setChatNotificationToast] = useState<{ message: ChatMessage; channelName: string; channelId: string } | null>(null);
+
+  // Permohonan Reset Password States
+  const [passwordResetRequests, setPasswordResetRequests] = useState<PasswordResetRequest[]>(() => dataStorage.getPasswordResetRequests());
 
   // Real-time Network Online / Offline Detection
   const [isNetworkOnline, setIsNetworkOnline] = useState<boolean>(() => {
@@ -474,9 +488,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       chatChannels,
       chatMessages,
       breakfastMenuItems,
-      breakfastOrders
+      breakfastOrders,
+      passwordResetRequests
     }, storageNamespace);
-  }, [storageNamespace, users, buildings, meetingRooms, rooms, transactions, maintenances, qcInspections, workSessions, auditLogs, chatChannels, chatMessages, breakfastMenuItems, breakfastOrders]);
+  }, [storageNamespace, users, buildings, meetingRooms, rooms, transactions, maintenances, qcInspections, workSessions, auditLogs, chatChannels, chatMessages, breakfastMenuItems, breakfastOrders, passwordResetRequests]);
 
   // Auto-dismiss notification toast after 7 seconds
   useEffect(() => {
@@ -760,6 +775,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const login = (user: User, _preferNamespace?: StorageNamespace, rememberDevice: boolean = true) => {
+    if (user.status === 'Menunggu Persetujuan') {
+      showToast("Pendaftaran akun Anda masih menunggu persetujuan (ACC) dari Administrator!", "warning");
+      return;
+    }
+    if (user.status === 'Non-Aktif') {
+      showToast("Akses Ditolak: Akun petugas ini berstatus Non-Aktif. Hubungi Administrator!", "error");
+      return;
+    }
+
     try {
       if (rememberDevice) {
         localStorage.setItem('sim_haji_remember_session', 'true');
@@ -947,6 +971,160 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setUsers(prev => prev.filter(u => u.id !== userId));
     logAudit("Hapus User", `Menghapus akun ${target.username} (${target.fullName})`);
     showToast(`Akun ${target.fullName} berhasil dihapus dari sistem.`, "info");
+  };
+
+  const requestPasswordReset = (username: string, newPassword: string, notes?: string): { success: boolean; message: string } => {
+    const cleanUser = username.trim().toLowerCase();
+    const foundUser = users.find(u => u.username.toLowerCase() === cleanUser) || dataStorage.getUserByUsername(cleanUser);
+    if (!foundUser) {
+      return { success: false, message: 'Username / NIP tidak ditemukan dalam direktori petugas!' };
+    }
+    if (!newPassword || newPassword.trim().length < 3) {
+      return { success: false, message: 'Kata sandi baru minimal 3 karakter!' };
+    }
+
+    const newReq: PasswordResetRequest = {
+      id: `pr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      userId: foundUser.id,
+      username: foundUser.username,
+      fullName: foundUser.fullName,
+      role: foundUser.role,
+      newPassword: newPassword.trim(),
+      requestDate: getRealLocalDateTimeStr(),
+      status: 'MENUNGGU_PERSETUJUAN',
+      notes: notes?.trim() || 'Permohonan reset kata sandi diajukan oleh petugas'
+    };
+
+    setPasswordResetRequests(prev => [newReq, ...prev]);
+    dataStorage.savePasswordResetRequest(newReq);
+    logAudit('PERMOHONAN_RESET_PASSWORD', `Pengajuan reset kata sandi baru untuk akun ${foundUser.fullName} (${foundUser.username})`);
+    return { 
+      success: true, 
+      message: 'Permohonan kata sandi baru berhasil diajukan! Kata sandi akan aktif setelah disetujui (ACC) oleh Administrator.' 
+    };
+  };
+
+  const approvePasswordReset = (requestId: string): boolean => {
+    const req = (passwordResetRequests || []).find(r => r.id === requestId) || dataStorage.getPasswordResetRequests().find(r => r.id === requestId);
+    if (!req) {
+      showToast("Permohonan reset kata sandi tidak ditemukan atau telah diproses!", "error");
+      return false;
+    }
+
+    // 1. Perbarui kata sandi di dataStorage dan state users
+    let targetUser = users.find(u => u.id === req.userId || u.username.toLowerCase() === req.username.toLowerCase()) || dataStorage.getUserByUsername(req.username);
+    if (targetUser) {
+      const updatedUser: User = { ...targetUser, password: req.newPassword };
+      setUsers(prevUsers => prevUsers.map(u => (u.id === targetUser!.id ? updatedUser : u)));
+      dataStorage.saveUser(updatedUser);
+    }
+
+    // 2. Perbarui status permohonan menjadi DISETUJUI
+    const updatedReq: PasswordResetRequest = {
+      ...req,
+      status: 'DISETUJUI',
+      processedBy: currentUser?.fullName || 'Administrator Operasional',
+      processedAt: getRealLocalDateTimeStr()
+    };
+    setPasswordResetRequests(prev => prev.map(r => r.id === requestId ? updatedReq : r));
+    dataStorage.savePasswordResetRequest(updatedReq);
+
+    logAudit('ACC_RESET_PASSWORD', `Menyetujui perubahan kata sandi akun ${req.username} (${req.fullName})`);
+    showToast(`Kata sandi baru untuk ${req.fullName} (@${req.username}) BERHASIL DI-ACC! Petugas kini dapat masuk dengan sandi baru.`, 'success');
+    return true;
+  };
+
+  const rejectPasswordReset = (requestId: string, notes?: string): boolean => {
+    const req = (passwordResetRequests || []).find(r => r.id === requestId) || dataStorage.getPasswordResetRequests().find(r => r.id === requestId);
+    if (!req) {
+      showToast("Permohonan reset kata sandi tidak ditemukan atau telah diproses!", "error");
+      return false;
+    }
+
+    const updatedReq: PasswordResetRequest = {
+      ...req,
+      status: 'DITOLAK',
+      notes: notes ? `${req.notes || ''} [Catatan Penolakan: ${notes}]` : req.notes,
+      processedBy: currentUser?.fullName || 'Administrator Operasional',
+      processedAt: getRealLocalDateTimeStr()
+    };
+    setPasswordResetRequests(prev => prev.map(r => r.id === requestId ? updatedReq : r));
+    dataStorage.savePasswordResetRequest(updatedReq);
+
+    logAudit('REJECT_RESET_PASSWORD', `Menolak permohonan reset kata sandi akun ${req.username}`);
+    showToast(`Permohonan reset kata sandi untuk @${req.username} (${req.fullName}) TELAH DITOLAK.`, 'info');
+    return true;
+  };
+
+  const registerAccountRequest = (userData: {
+    fullName: string;
+    username: string;
+    password?: string;
+    role: UserRole;
+    department?: string;
+    phone: string;
+    assignedBuilding?: string;
+  }): { success: boolean; message: string } => {
+    const cleanUser = userData.username.trim().toLowerCase();
+    if (!cleanUser) {
+      return { success: false, message: 'Username / NIP tidak boleh kosong!' };
+    }
+    const exists = users.find(u => u.username.toLowerCase() === cleanUser) || dataStorage.getUserByUsername(cleanUser);
+    if (exists) {
+      return { success: false, message: `Username "${userData.username}" sudah digunakan di sistem!` };
+    }
+
+    const newUser: User = {
+      id: `u-reg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      fullName: userData.fullName.trim(),
+      username: cleanUser,
+      password: userData.password?.trim() || '12345',
+      role: userData.role || 'Resepsionis',
+      department: userData.department || 'Pelayanan & Resepsionis',
+      assignedBuilding: userData.assignedBuilding || 'Semua Gedung',
+      supervisorId: null,
+      phone: userData.phone.trim() || '-',
+      status: 'Menunggu Persetujuan'
+    };
+
+    setUsers(prev => [newUser, ...prev]);
+    dataStorage.saveUser(newUser);
+    logAudit('DAFTAR_AKUN_BARU', `Pendaftaran akun baru: ${newUser.fullName} (${newUser.username}) - menunggu persetujuan Administrator`);
+    return { 
+      success: true, 
+      message: 'Pendaftaran akun berhasil dikirim! Akun Anda sedang menunggu persetujuan (ACC) dari Administrator sebelum dapat masuk.' 
+    };
+  };
+
+  const approveUserRegistration = (userId: string): boolean => {
+    const target = users.find(u => u.id === userId) || dataStorage.getUserById(userId);
+    if (!target) {
+      showToast("Akun pendaftaran tidak ditemukan atau sudah diproses!", "error");
+      return false;
+    }
+
+    const updatedUser: User = { ...target, status: 'Aktif' };
+    setUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
+    dataStorage.saveUser(updatedUser);
+
+    logAudit('ACC_PENDAFTARAN_AKUN', `Menyetujui pendaftaran akun petugas: ${target.fullName} (${target.username}) sebagai ${target.role}`);
+    showToast(`Akun ${target.fullName} (@${target.username}) BERHASIL DI-ACC & AKTIF! Petugas sekarang dapat login.`, 'success');
+    return true;
+  };
+
+  const rejectUserRegistration = (userId: string): boolean => {
+    const target = users.find(u => u.id === userId) || dataStorage.getUserById(userId);
+    if (!target) {
+      showToast("Akun pendaftaran tidak ditemukan atau sudah diproses!", "error");
+      return false;
+    }
+
+    setUsers(prev => prev.filter(u => u.id !== userId));
+    dataStorage.deleteUser(userId);
+
+    logAudit('REJECT_PENDAFTARAN_AKUN', `Menolak dan menghapus pendaftaran akun petugas: ${target.fullName} (${target.username})`);
+    showToast(`Pendaftaran akun ${target.fullName} (@${target.username}) TELAH DITOLAK dan dihapus dari sistem.`, 'info');
+    return true;
   };
 
   const addTransaction = (tx: Transaction) => {
@@ -1962,6 +2140,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       openChat, closeChat, setActiveChatChannelId: handleSetActiveChatChannelId, toggleChatSound, sendChatMessage,
       markChannelAsRead, dismissChatNotification, simulateIncomingChatMessage,
       clearChatHistory, addChatChannel, deleteChatChannel,
+      passwordResetRequests, requestPasswordReset, approvePasswordReset, rejectPasswordReset, registerAccountRequest, approveUserRegistration, rejectUserRegistration,
       login, logout, clearWorkSessions, setActiveTab, addUser, updateUser, toggleUserStatus, deleteUser, addTransaction, addGroupBooking, updateGroupBooking, updateTransaction, updateBreakfastStatus, checkoutRoom, activateCheckin, cancelBooking, extendTransaction, batchCheckinGroup, batchCheckoutGroup,
       addMaintenance, assignTechnicianToMaintenance, markMaintenanceRepaired, updateMaintenanceStatus, finishMaintenance, addQcInspection, logAudit, showToast, removeToast, openModal, closeModal,
       supabaseSyncState, manualSyncSupabase, pushAllToSupabase,

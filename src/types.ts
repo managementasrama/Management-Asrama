@@ -364,3 +364,17 @@ export interface BreakfastOrder {
   createdAt: string;
   updatedAt?: string;
 }
+
+export interface PasswordResetRequest {
+  id: string;
+  userId: string;
+  username: string;
+  fullName: string;
+  role: string;
+  newPassword: string;
+  requestDate: string;
+  status: 'MENUNGGU_PERSETUJUAN' | 'DISETUJUI' | 'DITOLAK';
+  notes?: string;
+  processedBy?: string;
+  processedAt?: string;
+}

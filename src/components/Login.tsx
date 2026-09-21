@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useAppContext, isSuperAdmin } from '../store';
-import { User } from '../types';
+import { useAppContext } from '../store';
+import { UserRole } from '../types';
 
 export function Login() {
-  const { login, users, showToast, appSettings } = useAppContext();
+  const { login, users, showToast, appSettings, registerAccountRequest, requestPasswordReset } = useAppContext();
 
-  // Kunci scrollbar laman utama selama halaman login aktif
+  // Kunci scrollbar laman utama selama halaman login aktif agar tidak ada scrollbar browser
   useEffect(() => {
     const originalBodyOverflow = document.body.style.overflow;
     const originalHtmlOverflow = document.documentElement.style.overflow;
@@ -16,6 +16,8 @@ export function Login() {
       document.documentElement.style.overflow = originalHtmlOverflow;
     };
   }, []);
+
+  // State Ingat Sesi Perangkat
   const [rememberDevice, setRememberDevice] = useState<boolean>(() => {
     try {
       const stored = localStorage.getItem('sim_haji_remember_session');
@@ -25,6 +27,7 @@ export function Login() {
     }
   });
 
+  // State Username & Password terhubung aktif dengan Ingat Sesi Perangkat
   const [username, setUsername] = useState<string>(() => {
     try {
       const isRemember = localStorage.getItem('sim_haji_remember_session');
@@ -36,10 +39,44 @@ export function Login() {
       return '';
     }
   });
-  const [password, setPassword] = useState('');
+
+  const [password, setPassword] = useState<string>(() => {
+    try {
+      const isRemember = localStorage.getItem('sim_haji_remember_session');
+      if (isRemember !== 'false') {
+        return localStorage.getItem('sim_haji_remembered_password') || '';
+      }
+      return '';
+    } catch {
+      return '';
+    }
+  });
+
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedRoleGroup, setSelectedRoleGroup] = useState<string>('ALL');
-  const [showQuickAccess, setShowQuickAccess] = useState(false);
+
+  // Modals for Daftar Akun & Lupa Password
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+
+  // Form State: Daftar Akun
+  const [regFullName, setRegFullName] = useState('');
+  const [regUsername, setRegUsername] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  const [regRole, setRegRole] = useState<UserRole>('Resepsionis');
+  const [regDepartment, setRegDepartment] = useState('Pelayanan & Resepsionis');
+  const [regBuilding, setRegBuilding] = useState('Semua Gedung');
+  const [regPhone, setRegPhone] = useState('');
+  const [regError, setRegError] = useState('');
+  const [regSuccessMsg, setRegSuccessMsg] = useState('');
+
+  // Form State: Lupa Password
+  const [fpUsername, setFpUsername] = useState('');
+  const [fpNewPassword, setFpNewPassword] = useState('');
+  const [fpConfirmPassword, setFpConfirmPassword] = useState('');
+  const [fpNotes, setFpNotes] = useState('');
+  const [fpError, setFpError] = useState('');
+  const [fpSuccessMsg, setFpSuccessMsg] = useState('');
 
   const executeLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,6 +85,11 @@ export function Login() {
     
     if (!foundUser) {
       showToast("Username / NIP tidak terdaftar di pangkalan data!", "error");
+      return;
+    }
+
+    if (foundUser.status === 'Menunggu Persetujuan') {
+      showToast("Pendaftaran akun Anda masih menunggu persetujuan (ACC) dari Administrator!", "warning");
       return;
     }
 
@@ -66,48 +108,117 @@ export function Login() {
       if (rememberDevice) {
         localStorage.setItem('sim_haji_remember_session', 'true');
         localStorage.setItem('sim_haji_remembered_username', cleanUser);
+        localStorage.setItem('sim_haji_remembered_password', password);
       } else {
         localStorage.setItem('sim_haji_remember_session', 'false');
         localStorage.removeItem('sim_haji_remembered_username');
+        localStorage.removeItem('sim_haji_remembered_password');
       }
     } catch (_) {}
 
     login(foundUser, undefined, rememberDevice);
   };
 
-  const handleSelectUser = (user: User) => {
-    setUsername(user.username);
-    setPassword(user.password || '12345');
-    try {
-      if (rememberDevice) {
-        localStorage.setItem('sim_haji_remember_session', 'true');
-        localStorage.setItem('sim_haji_remembered_username', user.username);
-      } else {
-        localStorage.setItem('sim_haji_remember_session', 'false');
-        localStorage.removeItem('sim_haji_remembered_username');
-      }
-    } catch (_) {}
-    login(user, undefined, rememberDevice);
+  const handleRoleSelection = (selected: UserRole) => {
+    setRegRole(selected);
+    if (selected === 'Super Admin' || selected === 'Admin') {
+      setRegDepartment('Pimpinan / Tata Usaha');
+    } else if (selected === 'Resepsionis') {
+      setRegDepartment('Pelayanan & Resepsionis');
+    } else if (selected === 'Quality Control') {
+      setRegDepartment('Pengawasan Mutu Hunian');
+    } else if (selected === 'Teknisi') {
+      setRegDepartment('Sarana & Prasarana');
+    } else if (selected === 'Petugas Koperasi') {
+      setRegDepartment('Koperasi & Konsumsi');
+    }
   };
 
-  const roleGroups = [
-    { id: 'ALL', label: 'Semua Peran', icon: 'fa-users' },
-    { id: 'ADMIN', label: 'Pimpinan & Admin', icon: 'fa-user-shield' },
-    { id: 'RECEPSIONIS', label: 'Resepsionis', icon: 'fa-bell-concierge' },
-    { id: 'QC', label: 'Quality Control (QC)', icon: 'fa-clipboard-check' },
-    { id: 'TEKNISI', label: 'Teknisi & Sarpras', icon: 'fa-screwdriver-wrench' },
-    { id: 'KOPERASI', label: 'Koperasi & Konsumsi', icon: 'fa-utensils' },
-  ];
+  const handleRegisterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setRegError('');
+    setRegSuccessMsg('');
 
-  const filteredQuickUsers = users.filter(u => {
-    if (selectedRoleGroup === 'ALL') return true;
-    if (selectedRoleGroup === 'ADMIN') return isSuperAdmin(u.role) || u.username.toLowerCase() === 'admin';
-    if (selectedRoleGroup === 'RECEPSIONIS') return u.role.includes('Resepsionis');
-    if (selectedRoleGroup === 'QC') return u.role.includes('QC') || u.role.includes('Quality');
-    if (selectedRoleGroup === 'TEKNISI') return u.role.includes('Teknisi');
-    if (selectedRoleGroup === 'KOPERASI') return u.role.includes('Koperasi');
-    return true;
-  });
+    if (!regFullName.trim()) {
+      setRegError('Nama lengkap wajib diisi!');
+      return;
+    }
+    if (!regUsername.trim()) {
+      setRegError('Username / NIP wajib diisi!');
+      return;
+    }
+    if (!regPassword || regPassword.length < 3) {
+      setRegError('Kata sandi minimal 3 karakter!');
+      return;
+    }
+    if (regPassword !== regConfirmPassword) {
+      setRegError('Konfirmasi kata sandi tidak sesuai!');
+      return;
+    }
+
+    const res = registerAccountRequest({
+      fullName: regFullName,
+      username: regUsername,
+      password: regPassword,
+      role: regRole,
+      department: regDepartment,
+      assignedBuilding: regBuilding,
+      phone: regPhone || '-'
+    });
+
+    if (!res.success) {
+      setRegError(res.message);
+      return;
+    }
+
+    setRegSuccessMsg(res.message);
+    showToast(res.message, 'success');
+    setTimeout(() => {
+      setShowRegisterModal(false);
+      setRegSuccessMsg('');
+      setRegFullName('');
+      setRegUsername('');
+      setRegPassword('');
+      setRegConfirmPassword('');
+      setRegPhone('');
+    }, 2500);
+  };
+
+  const handleForgotPasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setFpError('');
+    setFpSuccessMsg('');
+
+    if (!fpUsername.trim()) {
+      setFpError('Username / NIP petugas wajib diisi!');
+      return;
+    }
+    if (!fpNewPassword || fpNewPassword.length < 3) {
+      setFpError('Kata sandi baru minimal 3 karakter!');
+      return;
+    }
+    if (fpNewPassword !== fpConfirmPassword) {
+      setFpError('Konfirmasi kata sandi baru tidak sesuai!');
+      return;
+    }
+
+    const res = requestPasswordReset(fpUsername, fpNewPassword, fpNotes);
+    if (!res.success) {
+      setFpError(res.message);
+      return;
+    }
+
+    setFpSuccessMsg(res.message);
+    showToast(res.message, 'success');
+    setTimeout(() => {
+      setShowForgotPasswordModal(false);
+      setFpSuccessMsg('');
+      setFpUsername('');
+      setFpNewPassword('');
+      setFpConfirmPassword('');
+      setFpNotes('');
+    }, 2500);
+  };
 
   return (
     <div className="h-screen w-full bg-[#2e1d11] relative flex items-center justify-center p-2 sm:p-4 overflow-hidden font-sans select-none">
@@ -118,31 +229,31 @@ export function Login() {
 
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-gold-500/40 relative z-10 flex flex-col max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-1.5rem)] my-auto">
         {/* Official Header Banner - Kementerian Haji dan Umrah RI */}
-        <div className="bg-gradient-to-b from-hajj-900 via-hajj-800 to-hajj-900 px-4 py-3 sm:px-5 sm:py-3.5 text-white text-center relative border-b-4 border-gold-500 shrink-0">
-          <div className="flex items-center justify-center mb-2">
-            <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-xl flex items-center justify-center shadow-md overflow-hidden shrink-0 transition-transform ${appSettings?.appLogo && appSettings.appLogo.startsWith('data:') ? 'bg-white/10 backdrop-blur-xs p-1 border border-gold-400/30' : 'bg-gradient-to-br from-gold-400 via-gold-500 to-gold-600 text-hajj-950 border-2 border-gold-300 shadow-gold-500/20'}`}>
+        <div className="bg-gradient-to-b from-hajj-900 via-hajj-800 to-hajj-900 px-4 py-3.5 sm:px-6 sm:py-4 text-white text-center relative border-b-4 border-gold-500 shrink-0">
+          <div className="flex items-center justify-center mb-2.5">
+            <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center shadow-xl overflow-hidden shrink-0 transition-transform hover:scale-105 duration-200 ${appSettings?.appLogo && appSettings.appLogo.startsWith('data:') ? 'bg-white/15 backdrop-blur-xs p-2 border-2 border-gold-400/60 shadow-gold-500/20' : 'bg-gradient-to-br from-gold-300 via-gold-500 to-gold-600 text-hajj-950 border-2 border-gold-200 shadow-gold-500/40'}`}>
               {appSettings?.appLogo && appSettings.appLogo.startsWith('data:') ? (
                 <img src={appSettings.appLogo} alt="Logo Asrama Haji" className="w-full h-full object-contain filter drop-shadow" />
               ) : (
-                <i className={`fa-solid ${appSettings?.appLogo || 'fa-kaaba'} text-2xl sm:text-3xl`}></i>
+                <i className={`fa-solid ${appSettings?.appLogo || 'fa-kaaba'} text-4xl sm:text-5xl drop-shadow-xs`}></i>
               )}
             </div>
           </div>
           
-          <span className="text-[9px] uppercase tracking-wider text-gold-300 font-extrabold bg-gold-400/15 border border-gold-400/40 px-2.5 py-0.5 rounded-full inline-block mb-1">
+          <span className="text-[9.5px] uppercase tracking-wider text-gold-300 font-extrabold bg-gold-400/15 border border-gold-400/40 px-2.5 py-0.5 rounded-full inline-block mb-1">
             {appSettings?.ministryName || 'KEMENTERIAN HAJI DAN UMRAH REPUBLIK INDONESIA'}
           </span>
           <h1 className="text-base sm:text-lg font-black text-white tracking-tight leading-snug">
             {appSettings?.organizationName || 'UPT ASRAMA HAJI JAKARTA'}
           </h1>
-          <p className="text-[10px] sm:text-[10.5px] text-gold-100/90 mt-0.5 font-medium max-w-xs mx-auto">
+          <p className="text-[10px] sm:text-[11px] text-gold-100/90 mt-0.5 font-medium max-w-xs mx-auto">
             {appSettings?.subTitle || 'Sistem Informasi Manajemen Operasional Terpadu & Hunian'}
           </p>
         </div>
 
         {/* Login Form Container */}
-        <div className="p-4 sm:p-5 space-y-2.5 sm:space-y-3 bg-white flex-1 overflow-y-auto custom-scrollbar">
-          <form onSubmit={executeLogin} className="space-y-2.5 sm:space-y-3">
+        <div className="p-4 sm:p-5 space-y-3 bg-white flex-1 overflow-y-auto custom-scrollbar">
+          <form onSubmit={executeLogin} className="space-y-3">
             <div>
               <label className="block text-[11px] font-bold text-slate-800 uppercase tracking-wider mb-1">
                 Username / NIP Petugas
@@ -156,21 +267,16 @@ export function Login() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required 
-                  className="w-full pl-9 pr-3 py-1.5 sm:py-2 text-xs sm:text-sm bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-hajj-600 focus:border-hajj-600 focus:bg-white outline-none transition font-medium text-slate-900" 
-                  placeholder="Masukkan username (contoh: superadmin atau admin)" 
+                  className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-hajj-600 focus:border-hajj-600 focus:bg-white outline-none transition font-medium text-slate-900" 
+                  placeholder="Masukkan Username" 
                 />
               </div>
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-[11px] font-bold text-slate-800 uppercase tracking-wider">
-                  Kata Sandi
-                </label>
-                <span className="text-[10px] text-hajj-700 font-semibold hover:underline cursor-pointer">
-                  Default: 12345
-                </span>
-              </div>
+              <label className="block text-[11px] font-bold text-slate-800 uppercase tracking-wider mb-1">
+                Kata Sandi
+              </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                   <i className="fa-solid fa-lock text-xs"></i>
@@ -180,8 +286,8 @@ export function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required 
-                  className="w-full pl-9 pr-9 py-1.5 sm:py-2 text-xs sm:text-sm bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-hajj-600 focus:border-hajj-600 focus:bg-white outline-none transition font-medium text-slate-900" 
-                  placeholder="Masukkan kata sandi (contoh: 12345)" 
+                  className="w-full pl-9 pr-9 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-hajj-600 focus:border-hajj-600 focus:bg-white outline-none transition font-medium text-slate-900" 
+                  placeholder="Masukkan Kata Sandi" 
                 />
                 <button
                   type="button"
@@ -206,12 +312,12 @@ export function Login() {
                     try {
                       if (val) {
                         localStorage.setItem('sim_haji_remember_session', 'true');
-                        if (username.trim()) {
-                          localStorage.setItem('sim_haji_remembered_username', username.trim().toLowerCase());
-                        }
+                        if (username.trim()) localStorage.setItem('sim_haji_remembered_username', username.trim().toLowerCase());
+                        if (password.trim()) localStorage.setItem('sim_haji_remembered_password', password);
                       } else {
                         localStorage.setItem('sim_haji_remember_session', 'false');
                         localStorage.removeItem('sim_haji_remembered_username');
+                        localStorage.removeItem('sim_haji_remembered_password');
                       }
                     } catch (_) {}
                   }}
@@ -227,96 +333,49 @@ export function Login() {
 
             <button 
               type="submit" 
-              className="w-full py-2 sm:py-2.5 bg-gradient-to-r from-hajj-800 to-hajj-700 hover:from-hajj-900 hover:to-hajj-800 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center space-x-2 cursor-pointer mt-1 text-xs sm:text-sm"
+              className="w-full py-2.5 bg-gradient-to-r from-hajj-800 to-hajj-700 hover:from-hajj-900 hover:to-hajj-800 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center space-x-2 cursor-pointer mt-1 text-xs sm:text-sm"
             >
-              <span>Masuk Portal SIM-HAJI</span>
+              <span>Masuk</span>
               <i className="fa-solid fa-arrow-right-to-bracket text-gold-300 text-xs"></i>
             </button>
           </form>
 
-          {/* Quick Access / Pilihan Akun Berdasarkan Jabatan */}
-          <div className="pt-2.5 border-t border-slate-200">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <span className="text-xs font-bold text-slate-800 flex items-center">
-                  <i className="fa-solid fa-users-gear mr-1.5 text-hajj-700"></i>
-                  Pilihan Akun Cepat Petugas
-                </span>
-                <p className="text-[10px] text-slate-500">
-                  Klik akun untuk langsung masuk tugas
-                </p>
-              </div>
+          {/* Fitur Daftar Akun & Lupa Password */}
+          <div className="pt-3 border-t border-slate-200">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => setShowQuickAccess(v => !v)}
-                className="text-[11px] font-bold px-2.5 py-1 rounded-lg border border-gold-500/40 bg-gold-50 text-hajj-900 hover:bg-gold-100 transition flex items-center space-x-1 cursor-pointer shrink-0"
+                onClick={() => {
+                  setRegError('');
+                  setRegSuccessMsg('');
+                  setShowRegisterModal(true);
+                }}
+                className="w-full py-2 px-3 rounded-xl border border-hajj-700/25 bg-hajj-50/60 hover:bg-hajj-100/70 text-hajj-900 transition flex items-center justify-center space-x-1.5 text-[11px] sm:text-xs font-bold cursor-pointer shadow-xs hover:border-hajj-700/40"
               >
-                <span>{showQuickAccess ? 'Tutup' : 'Pilih Akun'}</span>
-                <i className={`fa-solid fa-chevron-${showQuickAccess ? 'up' : 'down'} text-[9px]`}></i>
+                <i className="fa-solid fa-user-plus text-hajj-700 text-xs"></i>
+                <span>Daftar Akun</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setFpError('');
+                  setFpSuccessMsg('');
+                  if (username.trim()) setFpUsername(username.trim());
+                  setShowForgotPasswordModal(true);
+                }}
+                className="w-full py-2 px-3 rounded-xl border border-amber-300 bg-amber-50/70 hover:bg-amber-100/70 text-amber-950 transition flex items-center justify-center space-x-1.5 text-[11px] sm:text-xs font-bold cursor-pointer shadow-xs hover:border-amber-400"
+              >
+                <i className="fa-solid fa-key text-amber-700 text-xs"></i>
+                <span>Lupa Password?</span>
               </button>
             </div>
 
-            {showQuickAccess && (
-              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-2 animate-in fade-in duration-150">
-                {/* Role Group Filter Tabs */}
-                <div className="flex items-center space-x-1 overflow-x-auto custom-scrollbar pb-1">
-                  {roleGroups.map(div => (
-                    <button
-                      key={div.id}
-                      type="button"
-                      onClick={() => setSelectedRoleGroup(div.id)}
-                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition flex items-center space-x-1 cursor-pointer ${
-                        selectedRoleGroup === div.id
-                          ? 'bg-hajj-800 text-gold-300 shadow-xs'
-                          : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
-                      }`}
-                    >
-                      <i className={`fa-solid ${div.icon} text-[9px]`}></i>
-                      <span>{div.label}</span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* User Cards Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-36 sm:max-h-44 overflow-y-auto custom-scrollbar pr-1">
-                  {filteredQuickUsers.map(u => {
-                    const isAdmin = isSuperAdmin(u.role) || u.username.toLowerCase() === 'admin';
-                    return (
-                      <button
-                        key={u.id}
-                        type="button"
-                        onClick={() => handleSelectUser(u)}
-                        className="p-2 border rounded-xl text-left transition flex items-start justify-between shadow-xs group cursor-pointer bg-white hover:bg-gold-50/70 border-slate-200 hover:border-gold-400"
-                      >
-                        <div className="min-w-0 pr-2">
-                          <div className="font-bold text-[11px] text-slate-900 group-hover:text-hajj-800 truncate flex items-center space-x-1">
-                            <span>{u.fullName}</span>
-                            {isAdmin && (
-                              <span className="bg-hajj-800 text-gold-300 text-[8px] font-bold px-1 py-0.2 rounded">
-                                ADMIN
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[9.5px] text-hajj-700 font-semibold truncate flex items-center space-x-1 mt-0.5">
-                            <i className="fa-solid fa-id-badge text-[8.5px] text-gold-600"></i>
-                            <span>{u.role}</span>
-                          </div>
-                          <div className="text-[8.5px] text-slate-400">
-                            {u.department || 'Operasional'}
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end shrink-0">
-                          <span className="text-[8.5px] font-mono font-bold px-1 py-0.5 rounded border bg-slate-100 group-hover:bg-gold-200 text-slate-700 group-hover:text-hajj-900 border-slate-200">
-                            {u.username}
-                          </span>
-                          <span className="text-[8.5px] text-slate-400 mt-0.5 font-mono">12345</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            <div className="mt-2.5 px-3 py-1.5 bg-slate-50 border border-slate-200/80 rounded-xl text-center">
+              <p className="text-[10px] text-slate-500 font-medium">
+                Pendaftaran akun dan permohonan lupa password akan diverifikasi & di-ACC oleh Administrator.
+              </p>
+            </div>
           </div>
 
           <div className="text-center pt-1">
@@ -326,6 +385,330 @@ export function Login() {
           </div>
         </div>
       </div>
+
+      {/* Modal 1: Daftar Akun Baru */}
+      {showRegisterModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gold-500/40 w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh]">
+            <div className="bg-gradient-to-r from-hajj-900 to-hajj-800 text-white px-5 py-3.5 flex items-center justify-between border-b-2 border-gold-500 shrink-0">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-lg bg-gold-500/20 border border-gold-400/40 flex items-center justify-center text-gold-300">
+                  <i className="fa-solid fa-user-plus text-sm"></i>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Daftar Akun Petugas Baru</h3>
+                  <p className="text-[10.5px] text-gold-200 font-normal">Memerlukan persetujuan (ACC) oleh Administrator</p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setShowRegisterModal(false)}
+                className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer"
+              >
+                <i className="fa-solid fa-xmark text-xs"></i>
+              </button>
+            </div>
+
+            <form onSubmit={handleRegisterSubmit} className="p-4 sm:p-5 space-y-3 overflow-y-auto custom-scrollbar flex-1">
+              {regError && (
+                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center space-x-2">
+                  <i className="fa-solid fa-circle-exclamation text-rose-500 shrink-0"></i>
+                  <span>{regError}</span>
+                </div>
+              )}
+              {regSuccessMsg && (
+                <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700 flex items-center space-x-2">
+                  <i className="fa-solid fa-circle-check text-emerald-500 shrink-0"></i>
+                  <span>{regSuccessMsg}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Nama Lengkap Petugas *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={regFullName}
+                    onChange={(e) => setRegFullName(e.target.value)}
+                    placeholder="Contoh: Ahmad Fauzi, S.Kom"
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-hajj-600 focus:border-hajj-600 focus:bg-white outline-none font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Username / NIP *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={regUsername}
+                    onChange={(e) => setRegUsername(e.target.value)}
+                    placeholder="Contoh: ahmad.fauzi"
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-hajj-600 focus:border-hajj-600 focus:bg-white outline-none font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Peran / Jabatan *
+                  </label>
+                  <select
+                    value={regRole}
+                    onChange={(e) => handleRoleSelection(e.target.value as UserRole)}
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-hajj-600 focus:border-hajj-600 focus:bg-white outline-none font-medium text-slate-800 cursor-pointer"
+                  >
+                    <option value="Resepsionis">Resepsionis (Front Office)</option>
+                    <option value="Quality Control">Quality Control (QC Mutu)</option>
+                    <option value="Teknisi">Teknisi & Sarpras</option>
+                    <option value="Petugas Koperasi">Petugas Koperasi / Konsumsi</option>
+                    <option value="Admin">Admin Operasional</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    No. Handphone / WhatsApp
+                  </label>
+                  <input
+                    type="text"
+                    value={regPhone}
+                    onChange={(e) => setRegPhone(e.target.value)}
+                    placeholder="Contoh: 081234567890"
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-hajj-600 focus:border-hajj-600 focus:bg-white outline-none font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Penugasan Gedung
+                  </label>
+                  <select
+                    value={regBuilding}
+                    onChange={(e) => setRegBuilding(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-hajj-600 focus:border-hajj-600 focus:bg-white outline-none font-medium text-slate-800 cursor-pointer"
+                  >
+                    <option value="Semua Gedung">Semua Gedung (Umum)</option>
+                    <option value="Gedung A (Madinah)">Gedung A (Madinah)</option>
+                    <option value="Gedung B (Makkah)">Gedung B (Makkah)</option>
+                    <option value="Gedung C (Jeddah)">Gedung C (Jeddah)</option>
+                    <option value="Gedung D (Raudhah)">Gedung D (Raudhah)</option>
+                    <option value="Gedung E (Arafah)">Gedung E (Arafah)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Departemen / Unit Kerja
+                  </label>
+                  <input
+                    type="text"
+                    value={regDepartment}
+                    onChange={(e) => setRegDepartment(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-hajj-600 focus:border-hajj-600 focus:bg-white outline-none font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-200">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Kata Sandi *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={regPassword}
+                    onChange={(e) => setRegPassword(e.target.value)}
+                    placeholder="Minimal 3 karakter"
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-hajj-600 focus:border-hajj-600 focus:bg-white outline-none font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Ulangi Kata Sandi *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={regConfirmPassword}
+                    onChange={(e) => setRegConfirmPassword(e.target.value)}
+                    placeholder="Ketik ulang kata sandi"
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-hajj-600 focus:border-hajj-600 focus:bg-white outline-none font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-xl flex items-start space-x-2.5">
+                <i className="fa-solid fa-shield-halved text-amber-600 mt-0.5 text-xs"></i>
+                <div className="text-[10.5px] text-amber-900 leading-relaxed">
+                  <span className="font-bold">Informasi Persetujuan Akun:</span> Setelah pendaftaran berhasil dikirim, akun Anda akan berstatus <i>Menunggu Persetujuan</i>. Anda baru dapat login setelah disetujui (ACC) oleh Administrator UPT Asrama Haji Jakarta.
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setShowRegisterModal(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-100 transition cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-hajj-700 hover:bg-hajj-800 text-white font-bold text-xs shadow-md transition flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <i className="fa-solid fa-paper-plane text-xs"></i>
+                  <span>Kirim Pendaftaran Akun</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 2: Lupa Password & Permohonan Kata Sandi Baru */}
+      {showForgotPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border border-amber-400 w-full max-w-md overflow-hidden flex flex-col max-h-[92vh]">
+            <div className="bg-gradient-to-r from-amber-900 to-amber-800 text-white px-5 py-3.5 flex items-center justify-between border-b-2 border-gold-400 shrink-0">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-lg bg-gold-500/20 border border-gold-400/40 flex items-center justify-center text-gold-300">
+                  <i className="fa-solid fa-key text-sm"></i>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Permohonan Reset Kata Sandi</h3>
+                  <p className="text-[10.5px] text-amber-200 font-normal">Ketik kata sandi baru untuk di-ACC oleh Admin</p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setShowForgotPasswordModal(false)}
+                className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer"
+              >
+                <i className="fa-solid fa-xmark text-xs"></i>
+              </button>
+            </div>
+
+            <form onSubmit={handleForgotPasswordSubmit} className="p-4 sm:p-5 space-y-3 overflow-y-auto custom-scrollbar flex-1">
+              {fpError && (
+                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center space-x-2">
+                  <i className="fa-solid fa-circle-exclamation text-rose-500 shrink-0"></i>
+                  <span>{fpError}</span>
+                </div>
+              )}
+              {fpSuccessMsg && (
+                <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700 flex items-center space-x-2">
+                  <i className="fa-solid fa-circle-check text-emerald-500 shrink-0"></i>
+                  <span>{fpSuccessMsg}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Username / NIP Petugas *
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <i className="fa-solid fa-user text-xs"></i>
+                  </span>
+                  <input
+                    type="text"
+                    required
+                    value={fpUsername}
+                    onChange={(e) => setFpUsername(e.target.value)}
+                    placeholder="Masukkan username akun Anda"
+                    className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-600 focus:border-amber-600 focus:bg-white outline-none font-medium"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Kata Sandi Baru *
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <i className="fa-solid fa-lock text-xs"></i>
+                  </span>
+                  <input
+                    type="password"
+                    required
+                    value={fpNewPassword}
+                    onChange={(e) => setFpNewPassword(e.target.value)}
+                    placeholder="Masukkan kata sandi baru"
+                    className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-600 focus:border-amber-600 focus:bg-white outline-none font-medium"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Ulangi Kata Sandi Baru *
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <i className="fa-solid fa-check text-xs"></i>
+                  </span>
+                  <input
+                    type="password"
+                    required
+                    value={fpConfirmPassword}
+                    onChange={(e) => setFpConfirmPassword(e.target.value)}
+                    placeholder="Ketik ulang kata sandi baru"
+                    className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-600 focus:border-amber-600 focus:bg-white outline-none font-medium"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Catatan / Alasan Permohonan
+                </label>
+                <textarea
+                  rows={2}
+                  value={fpNotes}
+                  onChange={(e) => setFpNotes(e.target.value)}
+                  placeholder="Contoh: Lupa kata sandi lama, mohon di-ACC kata sandi baru."
+                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-600 focus:border-amber-600 focus:bg-white outline-none font-medium"
+                />
+              </div>
+
+              <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-xl flex items-start space-x-2.5">
+                <i className="fa-solid fa-clock-rotate-left text-amber-600 mt-0.5 text-xs"></i>
+                <div className="text-[10.5px] text-amber-900 leading-relaxed">
+                  <span className="font-bold">Alur Pengesahan:</span> Setelah permohonan dikirim, Administrator akan memverifikasi dan melakukan persetujuan (ACC). Setelah di-ACC, Anda dapat langsung login menggunakan kata sandi baru tersebut.
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPasswordModal(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-100 transition cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs shadow-md transition flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <i className="fa-solid fa-key text-xs"></i>
+                  <span>Ajukan Kata Sandi Baru</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

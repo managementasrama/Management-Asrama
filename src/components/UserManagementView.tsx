@@ -14,15 +14,22 @@ export function UserManagementView() {
     showToast, 
     openModal,
     login,
-    setActiveTab
+    setActiveTab,
+    passwordResetRequests = [],
+    approvePasswordReset,
+    rejectPasswordReset,
+    approveUserRegistration,
+    rejectUserRegistration
   } = useAppContext();
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'Aktif' | 'Non-Aktif'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'Aktif' | 'Non-Aktif' | 'Menunggu Persetujuan'>('ALL');
   const [buildingFilter, setBuildingFilter] = useState<string>('ALL');
   const [viewMode, setViewMode] = useState<'GRID' | 'TABLE'>('TABLE');
+  const [approvalTab, setApprovalTab] = useState<'REGISTER' | 'PASSWORD_RESET'>('REGISTER');
+  const [showApprovalSection, setShowApprovalSection] = useState(true);
 
   // Form Drawer / Modal State
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -43,7 +50,30 @@ export function UserManagementView() {
   // Quick Password Change Modal
   const [pwdTargetUser, setPwdTargetUser] = useState<User | null>(null);
   const [newPasswordVal, setNewPasswordVal] = useState('');
-  useBodyScrollLock(Boolean(pwdTargetUser));
+
+  // In-App Confirmation Modal (Mencegah window.confirm terblokir di iframe sandbox)
+  const [confirmActionModal, setConfirmActionModal] = useState<{
+    type: 'REJECT_REG' | 'REJECT_RESET' | 'DELETE_USER';
+    id: string;
+    title: string;
+    description: string;
+    targetName: string;
+    targetUsername: string;
+  } | null>(null);
+  useBodyScrollLock(Boolean(pwdTargetUser || confirmActionModal));
+
+  const handleConfirmActionExecute = () => {
+    if (!confirmActionModal) return;
+    const { type, id } = confirmActionModal;
+    if (type === 'REJECT_REG') {
+      rejectUserRegistration(id);
+    } else if (type === 'REJECT_RESET') {
+      rejectPasswordReset(id);
+    } else if (type === 'DELETE_USER') {
+      deleteUser(id);
+    }
+    setConfirmActionModal(null);
+  };
 
   // Handle role change to auto-suggest department & default supervisor
   const handleRoleChange = (selectedRole: string) => {
@@ -199,6 +229,17 @@ export function UserManagementView() {
     setPwdTargetUser(null);
     setNewPasswordVal('');
   };
+
+  // Pending Approvals
+  const pendingRegistrations = useMemo(() => {
+    return users.filter(u => u.status === 'Menunggu Persetujuan');
+  }, [users]);
+
+  const pendingPasswordResets = useMemo(() => {
+    return (passwordResetRequests || []).filter(r => r.status === 'MENUNGGU_PERSETUJUAN');
+  }, [passwordResetRequests]);
+
+  const totalPendingApprovals = pendingRegistrations.length + pendingPasswordResets.length;
 
   // Filtered Users
   const filteredUsers = useMemo(() => {
@@ -412,6 +453,259 @@ export function UserManagementView() {
             <span className="text-[10px] text-slate-400">Konsumsi & Dapur</span>
           </div>
         </div>
+      </div>
+
+      {/* 1.5. ANTREAN PERSETUJUAN (ACC) AKUN & RESET PASSWORD */}
+      <div className={`rounded-2xl border transition-all overflow-hidden ${
+        totalPendingApprovals > 0 
+          ? 'bg-amber-50/70 border-amber-300 shadow-sm' 
+          : 'bg-white border-slate-200'
+      }`}>
+        <div className="p-4 sm:p-5 flex items-center justify-between border-b border-slate-200/80">
+          <div className="flex items-center space-x-3">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white shadow-xs ${
+              totalPendingApprovals > 0 ? 'bg-amber-600' : 'bg-slate-600'
+            }`}>
+              <i className="fa-solid fa-clipboard-check text-lg"></i>
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <h3 className="font-black text-slate-900 text-sm sm:text-base">
+                  Antrean Persetujuan (ACC) Akun & Reset Kata Sandi
+                </h3>
+                {totalPendingApprovals > 0 ? (
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white shadow-xs animate-pulse">
+                    {totalPendingApprovals} Menunggu ACC
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    Semua Terproses
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Verifikasi pendaftaran anggota baru dan permohonan pembaruan kata sandi dari petugas
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowApprovalSection(s => !s)}
+            className="px-3 py-1.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer"
+          >
+            <span>{showApprovalSection ? 'Sembunyikan' : 'Buka Antrean'}</span>
+            <i className={`fa-solid fa-chevron-${showApprovalSection ? 'up' : 'down'} text-[10px]`}></i>
+          </button>
+        </div>
+
+        {showApprovalSection && (
+          <div className="p-4 sm:p-5 space-y-4">
+            {/* Sub-tabs: Pendaftaran vs Lupa Password */}
+            <div className="flex items-center space-x-2 border-b border-slate-200 pb-2">
+              <button
+                type="button"
+                onClick={() => setApprovalTab('REGISTER')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
+                  approvalTab === 'REGISTER'
+                    ? 'bg-hajj-800 text-gold-300 shadow-xs'
+                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                }`}
+              >
+                <i className="fa-solid fa-user-plus text-xs"></i>
+                <span>Pendaftaran Akun Baru</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                  pendingRegistrations.length > 0
+                    ? 'bg-amber-500 text-white font-bold'
+                    : 'bg-slate-200 text-slate-600'
+                }`}>
+                  {pendingRegistrations.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setApprovalTab('PASSWORD_RESET')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
+                  approvalTab === 'PASSWORD_RESET'
+                    ? 'bg-amber-800 text-gold-300 shadow-xs'
+                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                }`}
+              >
+                <i className="fa-solid fa-key text-xs"></i>
+                <span>Permohonan Reset Kata Sandi</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                  pendingPasswordResets.length > 0
+                    ? 'bg-amber-500 text-white font-bold'
+                    : 'bg-slate-200 text-slate-600'
+                }`}>
+                  {pendingPasswordResets.length}
+                </span>
+              </button>
+            </div>
+
+            {/* TAB 1: Pendaftaran Akun Baru */}
+            {approvalTab === 'REGISTER' && (
+              <div>
+                {pendingRegistrations.length === 0 ? (
+                  <div className="py-8 text-center bg-white rounded-xl border border-dashed border-slate-200">
+                    <i className="fa-solid fa-user-check text-slate-300 text-3xl mb-2"></i>
+                    <p className="text-xs font-bold text-slate-600">Tidak ada pendaftaran akun baru yang menunggu persetujuan.</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Semua permohonan akun petugas telah diproses.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {pendingRegistrations.map(cand => (
+                      <div key={cand.id} className="bg-white p-4 rounded-xl border-2 border-amber-300 shadow-xs flex flex-col justify-between space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-900 border border-amber-300 flex items-center justify-center font-bold text-sm">
+                              {cand.fullName.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-slate-900 text-sm leading-snug">{cand.fullName}</h4>
+                              <p className="text-xs font-mono text-slate-500">@{cand.username}</p>
+                            </div>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300">
+                            Menunggu ACC
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-[11px] bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-slate-600">
+                          <div>
+                            <span className="text-slate-400 text-[10px] block">Peran / Jabatan:</span>
+                            <span className="font-bold text-slate-800">{cand.role}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 text-[10px] block">Departemen:</span>
+                            <span className="font-semibold text-slate-800 truncate block">{cand.department || 'Pelayanan'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 text-[10px] block">Gedung Tugas:</span>
+                            <span className="font-medium text-slate-700">{cand.assignedBuilding || 'Semua Gedung'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 text-[10px] block">No. HP / WA:</span>
+                            <span className="font-medium text-slate-700">{cand.phone || '-'}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setConfirmActionModal({
+                                type: 'REJECT_REG',
+                                id: cand.id,
+                                title: 'Tolak Pendaftaran Akun',
+                                description: 'Apakah Anda yakin ingin menolak permohonan pendaftaran akun petugas ini? Akun akan dihapus dari antrean persetujuan.',
+                                targetName: cand.fullName,
+                                targetUsername: cand.username
+                              });
+                            }}
+                            className="px-3 py-1.5 rounded-lg border border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs transition flex items-center space-x-1 cursor-pointer"
+                          >
+                            <i className="fa-solid fa-xmark text-xs"></i>
+                            <span>Tolak</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => approveUserRegistration(cand.id)}
+                            className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs shadow-xs transition flex items-center space-x-1.5 cursor-pointer"
+                          >
+                            <i className="fa-solid fa-check text-xs"></i>
+                            <span>Setujui (ACC)</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 2: Permohonan Reset Kata Sandi */}
+            {approvalTab === 'PASSWORD_RESET' && (
+              <div>
+                {pendingPasswordResets.length === 0 ? (
+                  <div className="py-8 text-center bg-white rounded-xl border border-dashed border-slate-200">
+                    <i className="fa-solid fa-key text-slate-300 text-3xl mb-2"></i>
+                    <p className="text-xs font-bold text-slate-600">Tidak ada permohonan reset kata sandi yang menunggu persetujuan.</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Semua pengajuan kata sandi baru telah diproses.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {pendingPasswordResets.map(req => (
+                      <div key={req.id} className="bg-white p-4 rounded-xl border-2 border-amber-300 shadow-xs flex flex-col justify-between space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-900 border border-amber-300 flex items-center justify-center font-bold text-sm">
+                              <i className="fa-solid fa-key"></i>
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-slate-900 text-sm leading-snug">{req.fullName}</h4>
+                              <p className="text-xs font-mono text-slate-500">@{req.username} • {req.role}</p>
+                            </div>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300">
+                            Menunggu ACC
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5 bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs text-slate-700">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400 text-[11px]">Kata Sandi Baru Diajukan:</span>
+                            <span className="font-mono font-bold bg-amber-100 border border-amber-300 text-amber-900 px-2 py-0.5 rounded text-xs">
+                              {req.newPassword}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-slate-400">Waktu Pengajuan:</span>
+                            <span className="text-slate-600 font-medium">{req.requestDate}</span>
+                          </div>
+                          {req.notes && (
+                            <div className="text-[11px] pt-1 border-t border-slate-200 text-slate-500 italic">
+                              "{req.notes}"
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setConfirmActionModal({
+                                type: 'REJECT_RESET',
+                                id: req.id,
+                                title: 'Tolak Reset Kata Sandi',
+                                description: 'Apakah Anda yakin ingin menolak permohonan pembaruan kata sandi untuk akun petugas ini? Kata sandi lama tetap digunakan.',
+                                targetName: req.fullName,
+                                targetUsername: req.username
+                              });
+                            }}
+                            className="px-3 py-1.5 rounded-lg border border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs transition flex items-center space-x-1 cursor-pointer"
+                          >
+                            <i className="fa-solid fa-xmark text-xs"></i>
+                            <span>Tolak</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => approvePasswordReset(req.id)}
+                            className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs shadow-xs transition flex items-center space-x-1.5 cursor-pointer"
+                          >
+                            <i className="fa-solid fa-check text-xs"></i>
+                            <span>Setujui (ACC Sandi)</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 2. ADD / EDIT USER FORM (COLLAPSIBLE / MODAL-LIKE DRAWER) */}
@@ -759,7 +1053,8 @@ export function UserManagementView() {
             {[
               { id: 'ALL', label: 'Semua' },
               { id: 'Aktif', label: 'Aktif' },
-              { id: 'Non-Aktif', label: 'Non-Aktif' }
+              { id: 'Non-Aktif', label: 'Non-Aktif' },
+              { id: 'Menunggu Persetujuan', label: `Menunggu ACC (${pendingRegistrations.length})` }
             ].map(s => (
               <button
                 key={s.id}
@@ -767,8 +1062,8 @@ export function UserManagementView() {
                 onClick={() => setStatusFilter(s.id as any)}
                 className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
                   statusFilter === s.id
-                    ? 'bg-slate-800 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    ? s.id === 'Menunggu Persetujuan' ? 'bg-amber-600 text-white shadow-xs' : 'bg-slate-800 text-white shadow-xs'
+                    : s.id === 'Menunggu Persetujuan' && pendingRegistrations.length > 0 ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
                 {s.label}
@@ -948,37 +1243,74 @@ export function UserManagementView() {
 
                       {/* Status */}
                       <td className="py-3 px-4 text-center">
-                        <button
-                          type="button"
-                          onClick={() => toggleUserStatus(user.id)}
-                          disabled={isMainAdmin || isCurrent}
-                          className={`px-2.5 py-1 rounded-full text-[10px] font-black transition cursor-pointer ${
-                            user.status === 'Aktif'
-                              ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300'
-                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300'
-                          } ${isMainAdmin || isCurrent ? 'opacity-60 cursor-not-allowed' : ''}`}
-                          title={isMainAdmin ? 'Akun Administrator utama tidak dapat dinonaktifkan' : 'Klik untuk mengubah status aktif/non-aktif'}
-                        >
-                          {user.status === 'Aktif' ? '● AKTIF' : '○ NON-AKTIF'}
-                        </button>
+                        {user.status === 'Menunggu Persetujuan' ? (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 animate-pulse inline-flex items-center space-x-1">
+                            <i className="fa-solid fa-clock text-[9px]"></i>
+                            <span>MENUNGGU ACC</span>
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => toggleUserStatus(user.id)}
+                            disabled={isMainAdmin || isCurrent}
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-black transition cursor-pointer ${
+                              user.status === 'Aktif'
+                                ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300'
+                            } ${isMainAdmin || isCurrent ? 'opacity-60 cursor-not-allowed' : ''}`}
+                            title={isMainAdmin ? 'Akun Administrator utama tidak dapat dinonaktifkan' : 'Klik untuk mengubah status aktif/non-aktif'}
+                          >
+                            {user.status === 'Aktif' ? '● AKTIF' : '○ NON-AKTIF'}
+                          </button>
+                        )}
                       </td>
 
                       {/* Aksi & Kelola */}
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end space-x-1">
-                          {/* Test Login as this user */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              login(user);
-                              setActiveTab('dashboard');
-                              showToast(`Simulasi login: ${user.fullName} (${user.role})`, 'success');
-                            }}
-                            className="p-1.5 text-indigo-700 hover:bg-indigo-50 rounded-lg transition cursor-pointer"
-                            title="Simulasikan login sebagai anggota ini"
-                          >
-                            <i className="fa-solid fa-arrow-right-to-bracket text-xs"></i>
-                          </button>
+                          {user.status === 'Menunggu Persetujuan' ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => approveUserRegistration(user.id)}
+                                className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1 cursor-pointer shadow-xs"
+                                title="Setujui Pendaftaran (ACC)"
+                              >
+                                <i className="fa-solid fa-check text-xs"></i>
+                                <span>ACC</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setConfirmActionModal({
+                                    type: 'REJECT_REG',
+                                    id: user.id,
+                                    title: 'Tolak Pendaftaran Akun',
+                                    description: 'Apakah Anda yakin ingin menolak permohonan pendaftaran akun petugas ini?',
+                                    targetName: user.fullName,
+                                    targetUsername: user.username
+                                  });
+                                }}
+                                className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                                title="Tolak Pendaftaran"
+                              >
+                                <i className="fa-solid fa-xmark text-xs"></i>
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                login(user);
+                                setActiveTab('dashboard');
+                                showToast(`Simulasi login: ${user.fullName} (${user.role})`, 'success');
+                              }}
+                              className="p-1.5 text-indigo-700 hover:bg-indigo-50 rounded-lg transition cursor-pointer"
+                              title="Simulasikan login sebagai anggota ini"
+                            >
+                              <i className="fa-solid fa-arrow-right-to-bracket text-xs"></i>
+                            </button>
+                          )}
 
                           {/* Edit User */}
                           <button
@@ -1002,9 +1334,14 @@ export function UserManagementView() {
                                 showToast('Anda tidak dapat menghapus akun Anda sendiri!', 'warning');
                                 return;
                               }
-                              if (window.confirm(`Hapus akun petugas "${user.fullName}" (@${user.username})? Tindakan ini tidak dapat dibatalkan.`)) {
-                                deleteUser(user.id);
-                              }
+                              setConfirmActionModal({
+                                type: 'DELETE_USER',
+                                id: user.id,
+                                title: 'Hapus Akun Petugas',
+                                description: 'Apakah Anda yakin ingin menghapus akun petugas ini dari pangkalan data sistem? Tindakan ini permanen.',
+                                targetName: user.fullName,
+                                targetUsername: user.username
+                              });
                             }}
                             disabled={isMainAdmin || isCurrent}
                             className={`p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer ${
@@ -1063,18 +1400,24 @@ export function UserManagementView() {
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => toggleUserStatus(user.id)}
-                      disabled={isMainAdmin || isCurrent}
-                      className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
-                        user.status === 'Aktif'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                          : 'bg-slate-100 text-slate-500 border-slate-300'
-                      } ${isMainAdmin || isCurrent ? 'opacity-70' : 'cursor-pointer hover:bg-opacity-80'}`}
-                    >
-                      {user.status}
-                    </button>
+                    {user.status === 'Menunggu Persetujuan' ? (
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full border bg-amber-50 text-amber-800 border-amber-300 animate-pulse">
+                        MENUNGGU ACC
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => toggleUserStatus(user.id)}
+                        disabled={isMainAdmin || isCurrent}
+                        className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
+                          user.status === 'Aktif'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                            : 'bg-slate-100 text-slate-500 border-slate-300'
+                        } ${isMainAdmin || isCurrent ? 'opacity-70' : 'cursor-pointer hover:bg-opacity-80'}`}
+                      >
+                        {user.status}
+                      </button>
+                    )}
                   </div>
 
                   <div className="mt-3 pt-3 border-t border-slate-100 space-y-1.5 text-xs text-slate-600">
@@ -1124,18 +1467,48 @@ export function UserManagementView() {
 
                 {/* Actions */}
                 <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      login(user);
-                      setActiveTab('dashboard');
-                      showToast(`Beralih simulasi login ke akun ${user.fullName}`, 'success');
-                    }}
-                    className="flex-1 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded-lg transition flex items-center justify-center space-x-1 cursor-pointer"
-                  >
-                    <i className="fa-solid fa-arrow-right-to-bracket text-xs"></i>
-                    <span>Uji Masuk</span>
-                  </button>
+                  {user.status === 'Menunggu Persetujuan' ? (
+                    <div className="flex-1 flex items-center space-x-1.5">
+                      <button
+                        type="button"
+                        onClick={() => approveUserRegistration(user.id)}
+                        className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-lg transition flex items-center justify-center space-x-1 cursor-pointer shadow-xs"
+                      >
+                        <i className="fa-solid fa-check text-xs"></i>
+                        <span>ACC</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setConfirmActionModal({
+                            type: 'REJECT_REG',
+                            id: user.id,
+                            title: 'Tolak Pendaftaran Akun',
+                            description: 'Apakah Anda yakin ingin menolak permohonan pendaftaran akun petugas ini?',
+                            targetName: user.fullName,
+                            targetUsername: user.username
+                          });
+                        }}
+                        className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-lg border border-rose-200 transition cursor-pointer"
+                        title="Tolak Pendaftaran"
+                      >
+                        <i className="fa-solid fa-xmark text-xs"></i>
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        login(user);
+                        setActiveTab('dashboard');
+                        showToast(`Beralih simulasi login ke akun ${user.fullName}`, 'success');
+                      }}
+                      className="flex-1 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded-lg transition flex items-center justify-center space-x-1 cursor-pointer"
+                    >
+                      <i className="fa-solid fa-arrow-right-to-bracket text-xs"></i>
+                      <span>Uji Masuk</span>
+                    </button>
+                  )}
 
                   <button
                     type="button"
@@ -1157,9 +1530,14 @@ export function UserManagementView() {
                         showToast('Anda tidak dapat menghapus akun Anda sendiri!', 'warning');
                         return;
                       }
-                      if (window.confirm(`Hapus akun petugas "${user.fullName}" (@${user.username})? Tindakan ini tidak dapat dibatalkan.`)) {
-                        deleteUser(user.id);
-                      }
+                      setConfirmActionModal({
+                        type: 'DELETE_USER',
+                        id: user.id,
+                        title: 'Hapus Akun Petugas',
+                        description: 'Apakah Anda yakin ingin menghapus akun petugas ini dari pangkalan data sistem? Tindakan ini permanen.',
+                        targetName: user.fullName,
+                        targetUsername: user.username
+                      });
                     }}
                     disabled={isMainAdmin || isCurrent}
                     className={`p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-lg transition ${
@@ -1234,6 +1612,45 @@ export function UserManagementView() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 6. IN-APP CONFIRMATION ACTION MODAL (SAFE FROM IFRAME RESTRICTIONS) */}
+      {confirmActionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 space-y-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-11 h-11 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-lg shrink-0">
+                <i className="fa-solid fa-triangle-exclamation"></i>
+              </div>
+              <div>
+                <h4 className="font-black text-slate-900 text-sm leading-snug">{confirmActionModal.title}</h4>
+                <p className="text-xs font-mono text-slate-500">@{confirmActionModal.targetUsername} • {confirmActionModal.targetName}</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs text-slate-600 leading-relaxed">
+              {confirmActionModal.description}
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setConfirmActionModal(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmActionExecute}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center space-x-1.5 cursor-pointer"
+              >
+                <i className="fa-solid fa-trash-can text-xs"></i>
+                <span>Ya, Konfirmasi Tindakan</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
