@@ -4,7 +4,8 @@ import { OperationalNotifications, OperationalSummaryRibbon } from './Operationa
 
 export function Header() {
   const { 
-    currentUser, login, logout, activeTab, setActiveTab, openModal, users, showToast, isDarkMode, toggleDarkMode, appSettings 
+    currentUser, login, logout, activeTab, setActiveTab, openModal, users, showToast, isDarkMode, toggleDarkMode, appSettings,
+    supabaseSyncState, manualSyncSupabase
   } = useAppContext();
   const [isSwitchOpen, setIsSwitchOpen] = useState(false);
   const switchRef = useRef<HTMLDivElement>(null);
@@ -223,6 +224,31 @@ export function Header() {
                 </span>
               </div>
               <i className="fa-solid fa-pen-to-square text-[10px] text-gold-400 ml-1 opacity-80"></i>
+            </button>
+
+            {/* Supabase Cloud Sync Status Button */}
+            <button
+              type="button"
+              onClick={manualSyncSupabase}
+              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 transition text-xs flex items-center justify-center space-x-1 shadow-xs cursor-pointer"
+              title={
+                supabaseSyncState.status === 'connected'
+                  ? 'Terkoneksi ke Supabase Cloud. Klik untuk sinkronisasi ulang data.'
+                  : supabaseSyncState.status === 'syncing'
+                  ? 'Sedang menyinkronkan data dengan Supabase...'
+                  : 'Klik untuk menghubungkan & sinkronisasi data dengan Supabase'
+              }
+            >
+              {supabaseSyncState.status === 'syncing' ? (
+                <i className="fa-solid fa-arrows-rotate animate-spin text-sky-300 text-sm"></i>
+              ) : supabaseSyncState.status === 'connected' ? (
+                <span className="flex items-center space-x-1">
+                  <i className="fa-solid fa-cloud text-emerald-400 text-sm"></i>
+                  <span className="hidden xl:inline text-[10px] font-bold text-emerald-300">Cloud Sync</span>
+                </span>
+              ) : (
+                <i className="fa-solid fa-cloud-arrow-up text-amber-300 text-sm"></i>
+              )}
             </button>
 
             {/* Dark Mode Toggle Button */}

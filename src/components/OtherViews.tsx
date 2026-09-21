@@ -2272,10 +2272,13 @@ export function AuditLogView({ defaultSubView }: { defaultSubView?: 'WORK_SESSIO
     auditLogs = [], workSessions = [], currentUser, showToast, openModal,
     exportDatabaseBackup, importDatabaseBackup, resetDatabase,
     rooms = [], transactions = [], maintenances = [], users = [],
-    breakfastOrders = [], breakfastMenuItems = [], qcInspections = []
+    breakfastOrders = [], breakfastMenuItems = [], qcInspections = [],
+    supabaseSyncState, manualSyncSupabase, pushAllToSupabase
   } = useAppContext();
   const safeWorkSessions = workSessions || [];
   const fileImportRef = React.useRef<HTMLInputElement>(null);
+  const [showSqlModal, setShowSqlModal] = useState(false);
+  const [isCloudSyncing, setIsCloudSyncing] = useState(false);
 
   // State for live ticker
   const [ticker, setTicker] = useState(0);
@@ -3530,6 +3533,208 @@ export function AuditLogView({ defaultSubView }: { defaultSubView?: 'WORK_SESSIO
               </div>
             </div>
           </div>
+
+          {/* Integrasi Backend Supabase Cloud & Vercel Deployment */}
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50/20 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-100 pb-3">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                  <i className="fa-solid fa-cloud"></i>
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800 text-sm flex items-center space-x-2">
+                    <span>Integrasi Backend Supabase Cloud &amp; Deployment Vercel</span>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
+                      @supabase/supabase-js Aktif
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    Penyimpanan terdistribusi cloud resmi untuk persistensi data online multi-perangkat dan kesiapan deploy Vercel.
+                  </p>
+                </div>
+              </div>
+
+              {/* Status Badge */}
+              <div className="flex items-center space-x-2">
+                <span className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                  supabaseSyncState.status === 'connected' 
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
+                    : supabaseSyncState.status === 'syncing'
+                    ? 'bg-sky-100 text-sky-800 border border-sky-200 animate-pulse'
+                    : 'bg-amber-100 text-amber-800 border border-amber-200'
+                }`}>
+                  <span className={`w-2 h-2 rounded-full ${
+                    supabaseSyncState.status === 'connected' ? 'bg-emerald-500' : supabaseSyncState.status === 'syncing' ? 'bg-sky-500' : 'bg-amber-500'
+                  }`}></span>
+                  <span>
+                    {supabaseSyncState.status === 'connected' && 'Terkoneksi ke Supabase'}
+                    {supabaseSyncState.status === 'syncing' && 'Sedang Menyinkronkan...'}
+                    {supabaseSyncState.status === 'idle' && 'Siap Sinkronisasi'}
+                    {supabaseSyncState.status === 'error' && (supabaseSyncState.errorMessage || 'Koneksi Terputus')}
+                  </span>
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between text-[11px] text-slate-500">
+                  <span className="font-semibold text-slate-700">Project Endpoint URL:</span>
+                  <span className="font-mono text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded text-[10px]">
+                    ijvbtubyjxqjethugzlm.supabase.co
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-slate-500">
+                  <span className="font-semibold text-slate-700">Klien SDK:</span>
+                  <span className="font-mono text-slate-700">@supabase/supabase-js v2.97</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-slate-500">
+                  <span className="font-semibold text-slate-700">Terakhir Sinkron:</span>
+                  <span className="font-mono text-slate-600">
+                    {supabaseSyncState.lastSyncTime ? new Date(supabaseSyncState.lastSyncTime).toLocaleTimeString('id-ID') : 'Otomatis di background'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between text-[11px] text-slate-500">
+                  <span className="font-semibold text-slate-700">Environment Variables:</span>
+                  <span className="text-emerald-700 font-medium">VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-slate-500">
+                  <span className="font-semibold text-slate-700">Target Hosting:</span>
+                  <span className="font-bold text-slate-800">Vercel (Production SPA)</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-slate-500">
+                  <span className="font-semibold text-slate-700">Skrip Tabel SQL:</span>
+                  <span className="text-blue-600 font-semibold cursor-pointer hover:underline" onClick={() => setShowSqlModal(true)}>
+                    Tersedia di supabase_schema.sql (Lihat)
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsCloudSyncing(true);
+                  await manualSyncSupabase();
+                  setIsCloudSyncing(false);
+                }}
+                disabled={isCloudSyncing}
+                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition flex items-center space-x-1.5 shadow-xs cursor-pointer disabled:opacity-50"
+              >
+                <i className={`fa-solid ${isCloudSyncing ? 'fa-spinner fa-spin' : 'fa-arrows-rotate'}`}></i>
+                <span>Tarik Data Terbaru dari Cloud</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsCloudSyncing(true);
+                  await pushAllToSupabase();
+                  setIsCloudSyncing(false);
+                }}
+                disabled={isCloudSyncing}
+                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-lg transition flex items-center space-x-1.5 shadow-xs cursor-pointer disabled:opacity-50"
+              >
+                <i className="fa-solid fa-cloud-arrow-up text-emerald-400"></i>
+                <span>Kirim &amp; Sync Data Lokal ke Supabase</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowSqlModal(true)}
+                className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold text-xs rounded-lg transition flex items-center space-x-1.5 cursor-pointer"
+              >
+                <i className="fa-solid fa-database"></i>
+                <span>Skrip SQL Editor Supabase</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Modal Skrip SQL Supabase */}
+          {showSqlModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200">
+                <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+                  <div className="flex items-center space-x-2">
+                    <i className="fa-solid fa-database text-emerald-600"></i>
+                    <h4 className="font-bold text-slate-900 text-sm">Skrip SQL Supabase (Database Schema)</h4>
+                  </div>
+                  <button 
+                    onClick={() => setShowSqlModal(false)}
+                    className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 flex items-center justify-center cursor-pointer"
+                  >
+                    <i className="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+                <div className="p-4 overflow-y-auto space-y-3 text-xs">
+                  <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-800">
+                    <p className="font-semibold">Petunjuk Pembuatan Tabel di Supabase:</p>
+                    <ol className="list-decimal list-inside mt-1 space-y-1 text-[11px]">
+                      <li>Buka Dashboard Supabase Anda: <strong>https://supabase.com/dashboard/project/ijvbtubyjxqjethugzlm</strong></li>
+                      <li>Pilih menu <strong>SQL Editor</strong> di bilah navigasi kiri.</li>
+                      <li>Klik <strong>New Query</strong>, tempelkan skrip di bawah ini, lalu klik <strong>Run</strong>.</li>
+                      <li>Tabel sinkronisasi snapshot &amp; tabel individual akan otomatis terbuat beserta kebijakan RLS.</li>
+                    </ol>
+                  </div>
+
+                  <div className="relative">
+                    <pre className="p-3 bg-slate-900 text-emerald-400 font-mono text-[11px] rounded-xl overflow-x-auto max-h-60">
+{`-- SKRIP TABEL DATABASE SIM-AKOMODASI UPT ASRAMA HAJI DI SUPABASE
+-- File lengkap tersimpan di: /supabase_schema.sql
+
+CREATE TABLE IF NOT EXISTS public.app_database_sync (
+  id TEXT PRIMARY KEY DEFAULT 'current_sync',
+  database_data JSONB NOT NULL,
+  exported_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  version INT DEFAULT 4
+);
+
+-- RLS Enable & Allow anon access
+ALTER TABLE public.app_database_sync ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public anon read and write" 
+ON public.app_database_sync FOR ALL TO anon USING (true) WITH CHECK (true);`}
+                    </pre>
+                  </div>
+                </div>
+                <div className="p-3 border-t border-slate-200 bg-slate-50 flex items-center justify-end space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`CREATE TABLE IF NOT EXISTS public.app_database_sync (
+  id TEXT PRIMARY KEY DEFAULT 'current_sync',
+  database_data JSONB NOT NULL,
+  exported_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  version INT DEFAULT 4
+);
+
+ALTER TABLE public.app_database_sync ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public anon read and write" 
+ON public.app_database_sync FOR ALL TO anon USING (true) WITH CHECK (true);`);
+                      showToast('Skrip SQL berhasil disalin ke clipboard!', 'success');
+                    }}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center space-x-1 cursor-pointer"
+                  >
+                    <i className="fa-solid fa-copy"></i>
+                    <span>Salin Skrip SQL</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowSqlModal(false)}
+                    className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-lg text-xs cursor-pointer"
+                  >
+                    Tutup
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Backup, Restore & Reset Action Tools */}
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">

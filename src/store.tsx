@@ -89,6 +89,15 @@ interface AppContextType {
   appSettings: AppSettings;
   updateAppSettings: (newTitle?: string, newLogo?: string) => void;
 
+  // Supabase Cloud Sync
+  supabaseSyncState: {
+    status: 'idle' | 'syncing' | 'connected' | 'error';
+    lastSyncTime: string | null;
+    errorMessage: string | null;
+  };
+  manualSyncSupabase: () => Promise<void>;
+  pushAllToSupabase: () => Promise<void>;
+
   // Chat State & Methods
   chatChannels: ChatChannel[];
   chatMessages: ChatMessage[];
@@ -306,6 +315,88 @@ export function AppProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // Supabase Cloud Sync State
+  const [supabaseSyncState, setSupabaseSyncState] = useState(dataStorage.getSupabaseSyncState());
+
+  // Periodik update status Supabase
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSupabaseSyncState(dataStorage.getSupabaseSyncState());
+    }, 4000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Hydrate awal dari Supabase Cloud saat aplikasi dibuka
+  useEffect(() => {
+    async function loadCloudDatabase() {
+      try {
+        const cloudDb = await dataStorage.hydrateFromSupabase();
+        if (cloudDb) {
+          setUsers(cloudDb.users);
+          setBuildings(cloudDb.buildings || []);
+          setMeetingRooms(cloudDb.meetingRooms || []);
+          setRooms(cloudDb.rooms);
+          setTransactions(cloudDb.transactions);
+          setMaintenances(cloudDb.maintenances);
+          setAuditLogs(cloudDb.auditLogs);
+          setWorkSessions(cloudDb.workSessions);
+          setQcInspections(cloudDb.qcInspections);
+          setBreakfastMenuItems(cloudDb.breakfastMenuItems || []);
+          setBreakfastOrders(cloudDb.breakfastOrders || []);
+          if (cloudDb.appSettings) setAppSettings(cloudDb.appSettings);
+          setSupabaseSyncState(dataStorage.getSupabaseSyncState());
+        }
+      } catch (err) {
+        console.warn('Gagal memuat database dari Supabase:', err);
+      }
+    }
+    loadCloudDatabase();
+  }, []);
+
+  const manualSyncSupabase = async () => {
+    showToast('Menghubungi Supabase Cloud...', 'info');
+    try {
+      const cloudDb = await dataStorage.hydrateFromSupabase();
+      if (cloudDb) {
+        setUsers(cloudDb.users);
+        setBuildings(cloudDb.buildings || []);
+        setMeetingRooms(cloudDb.meetingRooms || []);
+        setRooms(cloudDb.rooms);
+        setTransactions(cloudDb.transactions);
+        setMaintenances(cloudDb.maintenances);
+        setAuditLogs(cloudDb.auditLogs);
+        setWorkSessions(cloudDb.workSessions);
+        setQcInspections(cloudDb.qcInspections);
+        setBreakfastMenuItems(cloudDb.breakfastMenuItems || []);
+        setBreakfastOrders(cloudDb.breakfastOrders || []);
+        if (cloudDb.appSettings) setAppSettings(cloudDb.appSettings);
+        setSupabaseSyncState(dataStorage.getSupabaseSyncState());
+        showToast('Sinkronisasi Supabase berhasil diperbarui!', 'success');
+      } else {
+        const pushRes = await dataStorage.pushAllToSupabase();
+        setSupabaseSyncState(dataStorage.getSupabaseSyncState());
+        if (pushRes.success) {
+          showToast('Data berhasil disimpan ke Supabase Cloud!', 'success');
+        } else {
+          showToast(`Koneksi Supabase: ${pushRes.error || 'Terhubung'}`, 'warning');
+        }
+      }
+    } catch (err: any) {
+      showToast(`Gagal sinkronisasi: ${err?.message || 'Error'}`, 'error');
+    }
+  };
+
+  const pushAllToSupabase = async () => {
+    showToast('Mengunggah seluruh basis data ke Supabase...', 'info');
+    const res = await dataStorage.pushAllToSupabase();
+    setSupabaseSyncState(dataStorage.getSupabaseSyncState());
+    if (res.success) {
+      showToast('Seluruh data berhasil disimpan ke Supabase Cloud!', 'success');
+    } else {
+      showToast(`Gagal mengunggah ke Supabase: ${res.error || 'Error'}`, 'error');
+    }
+  };
 
   // Switch storage namespace and refresh in-memory state
   const switchStorageNamespace = (newNs: StorageNamespace) => {
@@ -1771,6 +1862,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       clearChatHistory, addChatChannel, deleteChatChannel,
       login, logout, setActiveTab, addUser, updateUser, toggleUserStatus, deleteUser, addTransaction, addGroupBooking, updateGroupBooking, updateTransaction, updateBreakfastStatus, checkoutRoom, activateCheckin, cancelBooking, extendTransaction, batchCheckinGroup, batchCheckoutGroup,
       addMaintenance, assignTechnicianToMaintenance, markMaintenanceRepaired, updateMaintenanceStatus, finishMaintenance, addQcInspection, logAudit, showToast, removeToast, openModal, closeModal,
+      supabaseSyncState, manualSyncSupabase, pushAllToSupabase,
       dataStorage, exportDatabaseBackup, importDatabaseBackup, resetDatabase
     }}>
       {children}

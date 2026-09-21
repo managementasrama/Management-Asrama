@@ -27,6 +27,13 @@ import {
   initialMeetingRooms
 } from '../data';
 import { initialChatChannels, initialChatMessages } from '../chatData';
+import { 
+  supabase, 
+  syncFullDatabaseToSupabase, 
+  fetchFullDatabaseFromSupabase, 
+  testSupabaseConnection, 
+  type SupabaseSyncState 
+} from '../lib/supabase';
 
 export type StorageNamespace = 'LOCAL' | 'PROD' | 'DEMO';
 
@@ -107,9 +114,27 @@ export function generateInitialDatabase(onlyAdmin: boolean = true): CompleteStor
 
 export class DataStorageService {
   private cache: CompleteStorageDatabase | null = null;
+  private lastSyncTime: string | null = null;
+  private syncStatus: 'idle' | 'syncing' | 'connected' | 'error' = 'idle';
+  private syncError: string | null = null;
+  private syncDebounceTimer: any = null;
 
   constructor() {
     this.getDatabase();
+    // Inisialisasi pengecekan koneksi Supabase di background
+    this.checkInitialSupabaseConnection();
+  }
+
+  private async checkInitialSupabaseConnection() {
+    try {
+      const res = await testSupabaseConnection();
+      if (res.success) {
+        this.syncStatus = 'connected';
+      } else {
+        this.syncStatus = 'error';
+        this.syncError = res.message;
+      }
+    } catch (_) {}
   }
 
   public getNamespace(): StorageNamespace {
@@ -125,11 +150,92 @@ export class DataStorageService {
   }
 
   public getLastSyncTime(): string | null {
-    return null;
+    return this.lastSyncTime;
+  }
+
+  public getSupabaseSyncState(): SupabaseSyncState {
+    return {
+      status: this.syncStatus,
+      lastSyncTime: this.lastSyncTime,
+      errorMessage: this.syncError,
+      isConfigured: true
+    };
+  }
+
+  /**
+   * Hidrasi data terbaru dari Supabase Cloud saat aplikasi dibuka
+   */
+  public async hydrateFromSupabase(): Promise<CompleteStorageDatabase | null> {
+    try {
+      this.syncStatus = 'syncing';
+      const cloudDb = await fetchFullDatabaseFromSupabase();
+      if (cloudDb && Array.isArray(cloudDb.rooms) && cloudDb.rooms.length > 0) {
+        this.cache = cloudDb;
+        this.lastSyncTime = new Date().toISOString();
+        this.syncStatus = 'connected';
+        this.syncError = null;
+        
+        // Simpan ke localStorage sebagai cache offline
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cloudDb));
+        }
+        return cloudDb;
+      }
+      this.syncStatus = 'connected';
+      return null;
+    } catch (err: any) {
+      this.syncStatus = 'error';
+      this.syncError = err?.message || 'Gagal mengambil data dari Supabase';
+      return null;
+    }
   }
 
   public async hydrateFromServer(_ns?: any): Promise<CompleteStorageDatabase | null> {
-    return null;
+    return this.hydrateFromSupabase();
+  }
+
+  /**
+   * Sinkronisasi paksa ke Supabase
+   */
+  public async pushAllToSupabase(): Promise<{ success: boolean; error?: string }> {
+    const db = this.getDatabase();
+    this.syncStatus = 'syncing';
+    const res = await syncFullDatabaseToSupabase(db);
+    if (res.success) {
+      this.syncStatus = 'connected';
+      this.lastSyncTime = new Date().toISOString();
+      this.syncError = null;
+    } else {
+      this.syncStatus = 'error';
+      this.syncError = res.error || 'Gagal push ke Supabase';
+    }
+    return res;
+  }
+
+  /**
+   * Mengirim data ke Supabase dengan debouncing agar hemat bandwidth dan tidak membebani UI
+   */
+  private triggerSupabaseSync(db: CompleteStorageDatabase) {
+    if (this.syncDebounceTimer) {
+      clearTimeout(this.syncDebounceTimer);
+    }
+    this.syncDebounceTimer = setTimeout(async () => {
+      try {
+        this.syncStatus = 'syncing';
+        const res = await syncFullDatabaseToSupabase(db);
+        if (res.success) {
+          this.syncStatus = 'connected';
+          this.lastSyncTime = new Date().toISOString();
+          this.syncError = null;
+        } else {
+          this.syncStatus = 'error';
+          this.syncError = res.error || 'Koneksi Supabase terputus';
+        }
+      } catch (err: any) {
+        this.syncStatus = 'error';
+        this.syncError = err?.message || 'Sync error';
+      }
+    }, 1500);
   }
 
   public setNamespace(_ns: any): CompleteStorageDatabase {
@@ -274,6 +380,9 @@ export class DataStorageService {
     } catch (e) {
       console.error('Gagal menyimpan database ke localStorage:', e);
     }
+
+    // Sinkronisasi otomatis ke Supabase Backend di cloud
+    this.triggerSupabaseSync(updated);
   }
 
   // ==========================================
