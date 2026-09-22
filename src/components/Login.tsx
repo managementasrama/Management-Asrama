@@ -231,11 +231,11 @@ export function Login() {
         {/* Official Header Banner - Kementerian Haji dan Umrah RI */}
         <div className="bg-gradient-to-b from-hajj-900 via-hajj-800 to-hajj-900 px-4 py-3.5 sm:px-6 sm:py-4 text-white text-center relative border-b-4 border-gold-500 shrink-0">
           <div className="flex items-center justify-center mb-2.5">
-            <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center shadow-xl overflow-hidden shrink-0 transition-transform hover:scale-105 duration-200 ${appSettings?.appLogo && appSettings.appLogo.startsWith('data:') ? 'bg-white/15 backdrop-blur-xs p-2 border-2 border-gold-400/60 shadow-gold-500/20' : 'bg-gradient-to-br from-gold-300 via-gold-500 to-gold-600 text-hajj-950 border-2 border-gold-200 shadow-gold-500/40'}`}>
+            <div className={`w-28 h-28 sm:w-32 sm:h-32 rounded-2xl flex items-center justify-center overflow-hidden shrink-0 transition-transform hover:scale-105 duration-200 bg-transparent border-0 shadow-none text-gold-400`}>
               {appSettings?.appLogo && appSettings.appLogo.startsWith('data:') ? (
                 <img src={appSettings.appLogo} alt="Logo Asrama Haji" className="w-full h-full object-contain filter drop-shadow" />
               ) : (
-                <i className={`fa-solid ${appSettings?.appLogo || 'fa-kaaba'} text-4xl sm:text-5xl drop-shadow-xs`}></i>
+                <i className={`fa-solid ${appSettings?.appLogo || 'fa-kaaba'} text-5xl sm:text-6xl drop-shadow-xs`}></i>
               )}
             </div>
           </div>
@@ -325,10 +325,6 @@ export function Login() {
                 />
                 <span className="text-[11px] font-medium text-slate-700">Ingat sesi perangkat</span>
               </label>
-              <div className="flex items-center space-x-1 text-emerald-700 font-semibold text-[11px]">
-                <i className="fa-solid fa-database text-[10px]"></i>
-                <span>Database Terpadu</span>
-              </div>
             </div>
 
             <button 
@@ -336,7 +332,6 @@ export function Login() {
               className="w-full py-2.5 bg-gradient-to-r from-hajj-800 to-hajj-700 hover:from-hajj-900 hover:to-hajj-800 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center space-x-2 cursor-pointer mt-1 text-xs sm:text-sm"
             >
               <span>Masuk</span>
-              <i className="fa-solid fa-arrow-right-to-bracket text-gold-300 text-xs"></i>
             </button>
           </form>
 

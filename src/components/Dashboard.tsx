@@ -486,27 +486,20 @@ export function Dashboard() {
     >
       {/* 1. TOP LIVE OPERATIONAL OVERVIEW BAR */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-hajj-50 text-hajj-800 border border-hajj-200 flex items-center justify-center font-bold text-base shadow-xs shrink-0">
-            <i className="fa-solid fa-kaaba"></i>
+        <div>
+          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+            Akses Cepat & Panel Kontrol
           </div>
-          <div>
-            <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-              <h2 className="text-base font-black text-slate-900 tracking-tight">
-                Pusat Kendali Operasional UPT Asrama Haji
-              </h2>
-            </div>
-            <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5 flex-wrap">
-              <span>{formatIndonesianDate(realToday)}</span>
-              <span>•</span>
-              <span>
-                Petugas Bertugas: <strong className="text-slate-700">{currentUser?.fullName || 'Petugas UPT'}</strong> ({currentUser?.role || 'Staff'})
-              </span>
-            </p>
-          </div>
+          <p className="text-xs text-slate-600 flex items-center gap-1.5 flex-wrap">
+            <span>{formatIndonesianDate(realToday)}</span>
+            <span>•</span>
+            <span>
+              Petugas: <strong className="text-slate-800">{currentUser?.fullName || 'Petugas UPT'}</strong> ({currentUser?.role || 'Staff'})
+            </span>
+          </p>
         </div>
 
-        {/* Quick Action Bar - Langsung sinkron ke Booking Kamar, Rombongan, Invoice, & Modul Terkait */}
+        {/* Quick Action Bar - Akses Cepat dengan Penataan Lebih Rapi */}
         <div className="flex items-center flex-wrap gap-2">
           {/* Booking Kamar Baru */}
           <button 
@@ -522,10 +515,10 @@ export function Dashboard() {
                 setActiveTab('gedung');
               }
             }} 
-            className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
+            className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
             title="Buka form reservasi / booking kamar penginapan"
           >
-            <i className="fa-solid fa-calendar-plus text-gold-300"></i>
+            <i className="fa-solid fa-calendar-plus text-gold-300 text-[11px]"></i>
             <span>+ Booking Kamar</span>
           </button>
 
@@ -533,10 +526,10 @@ export function Dashboard() {
           <button 
             type="button"
             onClick={() => openModal('modalGroupRegistration')} 
-            className="px-3 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
+            className="px-3.5 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
             title="Daftarkan rombongan jemaah haji, umum, atau instansi"
           >
-            <i className="fa-solid fa-users-rectangle text-gold-400"></i>
+            <i className="fa-solid fa-users-rectangle text-gold-400 text-[11px]"></i>
             <span>+ Rombongan</span>
           </button>
 
@@ -552,10 +545,10 @@ export function Dashboard() {
                 showToast('Belum ada transaksi aktif untuk dicetak invoice.', 'info');
               }
             }} 
-            className="px-3 py-1.5 bg-slate-900 hover:bg-hajj-800 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
+            className="px-3.5 py-2 bg-slate-900 hover:bg-hajj-800 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
             title="Buka & cetak invoice resmi transaksi terkini"
           >
-            <i className="fa-solid fa-file-invoice text-gold-400"></i>
+            <i className="fa-solid fa-file-invoice text-gold-400 text-[11px]"></i>
             <span>Invoice Resmi</span>
           </button>
 
@@ -568,10 +561,10 @@ export function Dashboard() {
                 if (targetQc) openModal('modalQcInspection', { room: targetQc });
                 else setActiveTab('qualityControl');
               }}
-              className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
+              className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
               title="Inspeksi Kendali Mutu Kamar"
             >
-              <i className="fa-solid fa-clipboard-check"></i>
+              <i className="fa-solid fa-clipboard-check text-[11px]"></i>
               <span>Inspeksi QC</span>
             </button>
           )}
@@ -580,10 +573,10 @@ export function Dashboard() {
             <button 
               type="button"
               onClick={() => setActiveTab('laporanMaintenance')}
-              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
+              className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
               title="Lihat Daftar Tiket Perbaikan & Sarpras"
             >
-              <i className="fa-solid fa-wrench"></i>
+              <i className="fa-solid fa-wrench text-[11px]"></i>
               <span>Tiket Teknisi</span>
             </button>
           )}
@@ -592,10 +585,10 @@ export function Dashboard() {
             <button 
               type="button"
               onClick={() => setActiveTab('pesananSarapan')}
-              className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
+              className="px-3.5 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
               title="Kelola Pesanan Sarapan Kamar"
             >
-              <i className="fa-solid fa-utensils"></i>
+              <i className="fa-solid fa-utensils text-[11px]"></i>
               <span>Dapur Sarapan</span>
             </button>
           )}

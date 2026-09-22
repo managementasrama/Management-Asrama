@@ -29,7 +29,7 @@ export function UserManagementView() {
   const [buildingFilter, setBuildingFilter] = useState<string>('ALL');
   const [viewMode, setViewMode] = useState<'GRID' | 'TABLE'>('TABLE');
   const [approvalTab, setApprovalTab] = useState<'REGISTER' | 'PASSWORD_RESET'>('REGISTER');
-  const [showApprovalSection, setShowApprovalSection] = useState(true);
+  const [showApprovalSection, setShowApprovalSection] = useState(false);
 
   // Form Drawer / Modal State
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -471,7 +471,7 @@ export function UserManagementView() {
             <div>
               <div className="flex items-center space-x-2">
                 <h3 className="font-black text-slate-900 text-sm sm:text-base">
-                  Antrean Persetujuan (ACC) Akun & Reset Kata Sandi
+                  Antrean Persetujuan (Verifikasi)
                 </h3>
                 {totalPendingApprovals > 0 ? (
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white shadow-xs animate-pulse">

@@ -55,6 +55,8 @@ export interface AppSettings {
   email: string;
   portalUrl: string;
   appLogo?: string;
+  appFavicon?: string;
+  tagTitle?: string;
 }
 
 export interface CompleteStorageDatabase {

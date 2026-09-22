@@ -330,8 +330,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [appSettings, setAppSettings] = useState<AppSettings>(() => dataStorage.getAppSettings());
 
   useEffect(() => {
-    if (appSettings?.organizationName) {
-      document.title = `${appSettings.organizationName} - Sistem Operasional Terpadu`;
+    if (appSettings?.tagTitle || appSettings?.organizationName) {
+      document.title = appSettings.tagTitle || `${appSettings.organizationName} - Sistem Operasional Terpadu`;
+    }
+    if (appSettings?.appFavicon && appSettings.appFavicon.startsWith('data:')) {
+      let link: HTMLLinkElement | null = document.querySelector("link[rel*='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.type = 'image/x-icon';
+        link.rel = 'shortcut icon';
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
+      link.href = appSettings.appFavicon;
     }
   }, [appSettings]);
 
@@ -348,7 +358,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     const updated = dataStorage.updateAppSettings(updates);
     setAppSettings(updated);
-    logAudit('Pengaturan Web Admin', `Admin mengubah konfigurasi judul/logo web sistem.`);
+    logAudit('Pengaturan Web Admin', `Admin mengubah konfigurasi judul, logo, favicon & tag title web sistem.`);
     showToast('Konfigurasi Web Sistem berhasil diperbarui!', 'success');
   };
 

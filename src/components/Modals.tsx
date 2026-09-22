@@ -1579,8 +1579,8 @@ export function Modals() {
                 return (
                   <div className="p-3.5 bg-gradient-to-r from-amber-50/70 to-slate-50 border border-amber-200/80 rounded-xl flex items-center justify-between shadow-xs">
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-sm shadow-xs">
-                        {selectedRoom?.roomNumber || '—'}
+                      <div className="px-3.5 py-2 rounded-xl bg-amber-100 text-amber-900 border border-amber-300 font-black text-xs shadow-2xs whitespace-nowrap">
+                        No. Kamar: {selectedRoom?.roomNumber || '—'}
                       </div>
                       <div>
                         <span className="font-bold text-slate-900 text-xs block">{selectedRoom?.building || 'Pilih Lokasi'}</span>

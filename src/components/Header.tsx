@@ -31,31 +31,31 @@ export function Header() {
     },
     { 
       id: 'gedung', 
-      label: 'Gedung, Kamar & Ruang Pertemuan', 
+      label: 'Manajemen Gedung', 
       icon: 'fa-building', 
       roles: ['Super Admin', 'Admin', 'Manager Resepsionis', 'Resepsionis', 'Manager QC', 'Quality Control', 'Manager Teknisi', 'Teknisi', 'Manager Koperasi', 'Petugas Koperasi', 'Koperasi', 'Manager'] 
     },
     { 
-      id: 'qualityControl', 
-      label: 'Quality Control (QC)', 
-      icon: 'fa-clipboard-check', 
-      roles: ['Super Admin', 'Admin', 'Manager QC', 'Quality Control', 'Manager Resepsionis', 'Manager'] 
-    },
-    { 
       id: 'pesananSarapan', 
-      label: 'Pesanan Sarapan', 
+      label: 'Pesanan Dapur', 
       icon: 'fa-utensils', 
       roles: ['Super Admin', 'Admin', 'Manager Koperasi', 'Petugas Koperasi', 'Manager Resepsionis', 'Resepsionis', 'Manager', 'Koperasi'] 
     },
     { 
+      id: 'qualityControl', 
+      label: 'Pengecekan (QC)', 
+      icon: 'fa-clipboard-check', 
+      roles: ['Super Admin', 'Admin', 'Manager QC', 'Quality Control', 'Manager Resepsionis', 'Manager'] 
+    },
+    { 
       id: 'laporanMaintenance', 
-      label: 'Laporan Maintenance', 
+      label: 'Laporan Perawatan', 
       icon: 'fa-screwdriver-wrench', 
       roles: ['Super Admin', 'Admin', 'Manager Teknisi', 'Teknisi', 'Manager QC', 'Quality Control', 'Manager Resepsionis', 'Manager'] 
     },
     { 
       id: 'laporanKamar', 
-      label: 'Laporan Kamar & Booking', 
+      label: 'Laporan Pemesanan', 
       icon: 'fa-file-invoice', 
       roles: ['Super Admin', 'Admin', 'Manager Resepsionis', 'Resepsionis', 'Manager'] 
     },

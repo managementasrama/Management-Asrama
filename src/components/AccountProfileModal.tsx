@@ -19,6 +19,8 @@ export function AccountProfileModal({ isOpen, onClose }: AccountProfileModalProp
   // Admin settings for Web Title & Logo
   const [webTitle, setWebTitle] = useState('UPT Asrama Haji Jakarta');
   const [webLogo, setWebLogo] = useState('fa-kaaba');
+  const [tagTitle, setTagTitle] = useState('UPT Asrama Haji Jakarta');
+  const [appFavicon, setAppFavicon] = useState('');
 
   useBodyScrollLock(isOpen);
 
@@ -31,8 +33,10 @@ export function AccountProfileModal({ isOpen, onClose }: AccountProfileModalProp
       setShowPassword(false);
 
       const appSettings = dataStorage.getAppSettings();
-      if (appSettings?.appName) setWebTitle(appSettings.appName);
+      if (appSettings?.organizationName) setWebTitle(appSettings.organizationName);
       if (appSettings?.appLogo) setWebLogo(appSettings.appLogo);
+      if (appSettings?.tagTitle) setTagTitle(appSettings.tagTitle);
+      if (appSettings?.appFavicon) setAppFavicon(appSettings.appFavicon);
     }
   }, [currentUser, isOpen, dataStorage]);
 
@@ -59,7 +63,12 @@ export function AccountProfileModal({ isOpen, onClose }: AccountProfileModalProp
 
     // If super admin / admin, also update app settings
     if (isSuperAdmin(currentUser.role)) {
-      updateAppSettings(webTitle.trim(), webLogo);
+      updateAppSettings({
+        organizationName: webTitle.trim(),
+        appLogo: webLogo,
+        tagTitle: tagTitle.trim(),
+        appFavicon: appFavicon
+      });
     }
 
     onClose();
@@ -86,6 +95,25 @@ export function AccountProfileModal({ isOpen, onClose }: AccountProfileModalProp
         if (result) {
           setWebLogo(result);
           showToast('Logo berhasil diunggah! Klik Simpan Perubahan.', 'success');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleFaviconFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 1 * 1024 * 1024) {
+        showToast('Ukuran file favicon maksimal 1MB!', 'warning');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        const result = uploadEvent.target?.result as string;
+        if (result) {
+          setAppFavicon(result);
+          showToast('Favicon berhasil diunggah!', 'success');
         }
       };
       reader.readAsDataURL(file);
@@ -202,6 +230,17 @@ export function AccountProfileModal({ isOpen, onClose }: AccountProfileModalProp
               </div>
 
               <div>
+                <label className="block font-bold text-slate-700 mb-1">Edit Tag Title (Judul Tab Browser)</label>
+                <input
+                  type="text"
+                  value={tagTitle}
+                  onChange={e => setTagTitle(e.target.value)}
+                  placeholder="Contoh: SIM-Akomodasi Asrama Haji"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium focus:ring-2 focus:ring-hajj-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
                 <label className="block font-bold text-slate-700 mb-1">Logo / Emblems Web (Upload Gambar atau Pilih Ikon)</label>
                 <div className="flex items-center space-x-3 mb-2">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden shrink-0 text-slate-700 text-lg ${webLogo && webLogo.startsWith('data:') ? 'bg-transparent border-0' : 'bg-slate-100 border border-slate-300'}`}>
@@ -235,6 +274,28 @@ export function AccountProfileModal({ isOpen, onClose }: AccountProfileModalProp
                     <option key={opt.id} value={opt.id}>{opt.label}</option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Edit Favicon (Ikon Tab Browser .ico/.png)</label>
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-300 flex items-center justify-center overflow-hidden shrink-0">
+                    {appFavicon ? (
+                      <img src={appFavicon} alt="Favicon Preview" className="w-full h-full object-contain" />
+                    ) : (
+                      <i className="fa-solid fa-globe text-slate-500"></i>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/png, image/x-icon, image/ico, image/svg+xml"
+                      onChange={handleFaviconFileChange}
+                      className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-hajj-100 file:text-hajj-800 hover:file:bg-hajj-200 cursor-pointer"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-0.5">Format ICO atau PNG (Maks. 1MB)</p>
+                  </div>
+                </div>
               </div>
             </div>
           )}
