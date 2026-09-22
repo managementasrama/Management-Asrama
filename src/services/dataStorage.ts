@@ -273,25 +273,10 @@ export class DataStorageService {
         if (stored) {
           const parsed = JSON.parse(stored) as Partial<CompleteStorageDatabase>;
           if (parsed && Array.isArray(parsed.rooms)) {
-            // SINKRONISASI PENGGUNA TERBARU: Pertahankan semua akun tersimpan dan sertakan akun master resmi UPT
-            const existingUsers = Array.isArray(parsed.users) ? parsed.users : [];
-            const mergedUsers = [...existingUsers];
-            
-            initialUsers.forEach(initUser => {
-              const idx = mergedUsers.findIndex(u => u.id === initUser.id || u.username.toLowerCase() === initUser.username.toLowerCase());
-              if (idx === -1) {
-                mergedUsers.push(initUser);
-              } else {
-                mergedUsers[idx] = {
-                  ...initUser,
-                  ...mergedUsers[idx],
-                  role: mergedUsers[idx].role || initUser.role,
-                  department: mergedUsers[idx].department || initUser.department,
-                  status: mergedUsers[idx].status || initUser.status
-                };
-              }
-            });
-            parsed.users = mergedUsers;
+            // SINKRONISASI PENGGUNA: Gunakan akun yang tersimpan dari storage/Supabase, fallback ke initialUsers hanya jika kosong
+            if (!Array.isArray(parsed.users) || parsed.users.length === 0) {
+              parsed.users = [...initialUsers];
+            }
 
             // BERSIHKAN SEMUA DATA DUMMY (Transaksi dummy, Maintenance dummy, QC dummy, Log aktivitas, Shift, dsb)
             if (!parsed.schemaVersion || parsed.schemaVersion < 4) {
@@ -1012,8 +997,8 @@ export class DataStorageService {
       this.saveDatabase({ ...db, breakfastOrders: updated });
       return true;
     } else {
-      const txIdShort = orderId.replace('BO-TX-', '');
-      const tx = (db.transactions || []).find(t => t.id.includes(txIdShort) || t.id === orderId);
+      const txId = orderId.replace('BO-TX-', '');
+      const tx = (db.transactions || []).find(t => t.id === txId || t.id.includes(txId) || t.id === orderId);
       if (tx) {
         const newOrder: BreakfastOrder = {
           id: orderId,

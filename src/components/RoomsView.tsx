@@ -421,15 +421,28 @@ export function RoomsView() {
           statusBadge = <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">Kosong</span>;
           
           if (isRecep) {
+            const isNeedQc = !room.qcStatus || room.qcStatus !== 'LOLOS_QC';
             btnAction = (
               <div className="space-y-1.5">
                 <button 
                   onClick={() => openModal('modalCheckin', { roomId: room.id, actionType: 'CHECKIN', initialDate: realTodayStr })} 
-                  className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs shadow-xs flex items-center justify-center space-x-1.5 transition cursor-pointer"
-                  title={bookedTxs.length > 0 ? "Pilih tamu reservasi atau check-in tamu baru" : "Tamu langsung Cek In hari ini"}
+                  className={`w-full py-1.5 font-bold rounded-lg text-xs shadow-xs flex items-center justify-center space-x-1.5 transition cursor-pointer ${
+                    isNeedQc
+                      ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  }`}
+                  title={
+                    isNeedQc
+                      ? "Perhatian: Kamar masih berstatus perlu cek QC oleh tim penilai mutu"
+                      : (bookedTxs.length > 0 ? "Pilih tamu reservasi atau check-in tamu baru" : "Tamu langsung Cek In hari ini")
+                  }
                 >
-                  <i className="fa-solid fa-door-open"></i>
-                  <span>{bookedTxs.length > 0 ? `Cek In (${bookedTxs.length} Booking)` : 'Cek In'}</span>
+                  <i className={`fa-solid ${isNeedQc ? 'fa-triangle-exclamation text-amber-200' : 'fa-door-open'}`}></i>
+                  <span>
+                    {isNeedQc
+                      ? (bookedTxs.length > 0 ? `Cek In (${bookedTxs.length} Booking - Perlu QC)` : 'Cek In (Perlu Cek QC)')
+                      : (bookedTxs.length > 0 ? `Cek In (${bookedTxs.length} Booking)` : 'Cek In')}
+                  </span>
                 </button>
                 <button 
                   onClick={() => openModal('modalCheckin', { roomId: room.id, actionType: 'BOOKING', initialDate: realTomorrowStr })} 
@@ -494,6 +507,7 @@ export function RoomsView() {
           );
           
           if (isRecep) {
+            const isNeedQc = !room.qcStatus || room.qcStatus !== 'LOLOS_QC';
             btnAction = (
               <div className="space-y-1.5">
                 <div className="text-[10px] text-slate-700 truncate font-bold mb-0.5">
@@ -502,17 +516,38 @@ export function RoomsView() {
                 <button 
                   type="button"
                   onClick={() => openModal('modalCheckin', { roomId: room.id, actionType: 'CHECKIN', initialDate: realTodayStr })} 
-                  className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs shadow flex items-center justify-center space-x-1.5 transition cursor-pointer"
-                  title="Pilih data tamu booking untuk proses check-in masuk kamar"
+                  className={`w-full py-1.5 font-bold rounded-lg text-xs shadow flex items-center justify-center space-x-1.5 transition cursor-pointer ${
+                    isNeedQc
+                      ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  }`}
+                  title={
+                    isNeedQc 
+                      ? "Perhatian: Kamar masih berstatus perlu cek QC oleh tim penilai mutu" 
+                      : "Pilih data tamu booking untuk proses check-in masuk kamar"
+                  }
                 >
-                  <i className="fa-solid fa-door-open"></i>
-                  <span>Check-In ({bookedTxs.length} Tamu Booking)</span>
+                  <i className={`fa-solid ${isNeedQc ? 'fa-triangle-exclamation text-amber-200' : 'fa-door-open'}`}></i>
+                  <span>
+                    {isNeedQc
+                      ? `Check-In (${bookedTxs.length} Tamu - Perlu QC)`
+                      : `Check-In (${bookedTxs.length} Tamu Booking)`}
+                  </span>
                 </button>
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className="grid grid-cols-3 gap-1">
+                  <button 
+                    type="button"
+                    onClick={() => openModal('modalCheckin', { roomId: room.id, actionType: 'BOOKING', initialDate: realTomorrowStr })} 
+                    className="py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold rounded-lg text-[11px] border border-blue-200 flex items-center justify-center space-x-1 transition cursor-pointer"
+                    title="Booking untuk tanggal lain / mendatang"
+                  >
+                    <i className="fa-solid fa-calendar-plus text-blue-600 text-[10px]"></i>
+                    <span>Tgl Lain</span>
+                  </button>
                   <button 
                     type="button"
                     onClick={() => openModal('modalRoomDetail', { roomId: room.id })} 
-                    className="py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs border border-slate-200 flex items-center justify-center space-x-1 transition cursor-pointer"
+                    className="py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-[11px] border border-slate-200 flex items-center justify-center space-x-1 transition cursor-pointer"
                     title="Buka rincian reservasi dan cetak invoice"
                   >
                     <i className="fa-solid fa-file-invoice text-indigo-600 text-[10px]"></i>
@@ -521,7 +556,7 @@ export function RoomsView() {
                   <button 
                     type="button"
                     onClick={() => openModal('modalCheckoutSelection', { roomId: room.id, type: 'CANCEL' })} 
-                    className="py-1 bg-red-50 text-red-700 hover:bg-red-100 font-semibold rounded-lg text-xs border border-red-200 flex items-center justify-center space-x-1 transition cursor-pointer"
+                    className="py-1 bg-red-50 text-red-700 hover:bg-red-100 font-semibold rounded-lg text-[11px] border border-red-200 flex items-center justify-center space-x-1 transition cursor-pointer"
                     title="Batalkan reservasi ini"
                   >
                     <i className="fa-solid fa-xmark text-[10px]"></i>

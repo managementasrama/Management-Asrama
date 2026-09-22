@@ -5,11 +5,13 @@ import { useBodyScrollLock } from '../lib/scrollLock';
 interface AccountProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialSection?: 'PROFIL' | 'BRANDING';
 }
 
-export function AccountProfileModal({ isOpen, onClose }: AccountProfileModalProps) {
+export function AccountProfileModal({ isOpen, onClose, initialSection }: AccountProfileModalProps) {
   const { currentUser, updateCurrentAccount, updateAppSettings, dataStorage, showToast } = useAppContext();
 
+  const [activeTab, setActiveTab] = useState<'PROFIL' | 'BRANDING'>('PROFIL');
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [phone, setPhone] = useState('');
@@ -26,6 +28,11 @@ export function AccountProfileModal({ isOpen, onClose }: AccountProfileModalProp
 
   useEffect(() => {
     if (currentUser && isOpen) {
+      if (initialSection) {
+        setActiveTab(initialSection);
+      } else {
+        setActiveTab('PROFIL');
+      }
       setFullName(currentUser.fullName);
       setUsername(currentUser.username);
       setPhone(currentUser.phone && currentUser.phone !== '-' ? currentUser.phone : '');
@@ -38,7 +45,7 @@ export function AccountProfileModal({ isOpen, onClose }: AccountProfileModalProp
       if (appSettings?.tagTitle) setTagTitle(appSettings.tagTitle);
       if (appSettings?.appFavicon) setAppFavicon(appSettings.appFavicon);
     }
-  }, [currentUser, isOpen, dataStorage]);
+  }, [currentUser, isOpen, initialSection, dataStorage]);
 
   if (!isOpen || !currentUser) return null;
 
@@ -127,11 +134,15 @@ export function AccountProfileModal({ isOpen, onClose }: AccountProfileModalProp
         <div className="p-4 bg-hajj-800 text-white flex items-center justify-between border-b border-gold-500/30">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-xl bg-gold-500 text-hajj-950 flex items-center justify-center font-bold text-base shadow">
-              <i className="fa-solid fa-user-gear"></i>
+              <i className={`fa-solid ${activeTab === 'BRANDING' ? 'fa-globe' : 'fa-user-gear'}`}></i>
             </div>
             <div>
-              <h3 className="font-bold text-sm text-white">Edit Profil Akun Saya</h3>
-              <p className="text-[11px] text-slate-300">Perbarui informasi kredensial & identitas login Anda</p>
+              <h3 className="font-bold text-sm text-white">
+                {activeTab === 'BRANDING' ? 'Pengaturan Judul & Logo Web' : 'Edit Profil Akun Saya'}
+              </h3>
+              <p className="text-[11px] text-slate-300">
+                {activeTab === 'BRANDING' ? 'Kustomisasi identitas instansi, nama sistem & logo' : 'Perbarui informasi kredensial & identitas login Anda'}
+              </p>
             </div>
           </div>
           <button 
@@ -143,78 +154,110 @@ export function AccountProfileModal({ isOpen, onClose }: AccountProfileModalProp
           </button>
         </div>
 
+        {/* Tab Navigation for Admin / Super Admin */}
+        {isSuperAdmin(currentUser.role) && (
+          <div className="flex border-b border-slate-200 bg-slate-50 px-4 pt-2.5 gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => setActiveTab('PROFIL')}
+              className={`pb-2 px-3 font-bold border-b-2 transition flex items-center space-x-1.5 cursor-pointer ${
+                activeTab === 'PROFIL'
+                  ? 'border-hajj-700 text-hajj-800'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <i className="fa-solid fa-user-pen"></i>
+              <span>Profil Akun</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('BRANDING')}
+              className={`pb-2 px-3 font-bold border-b-2 transition flex items-center space-x-1.5 cursor-pointer ${
+                activeTab === 'BRANDING'
+                  ? 'border-hajj-700 text-hajj-800'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <i className="fa-solid fa-globe"></i>
+              <span>Judul & Logo Web</span>
+            </button>
+          </div>
+        )}
+
         {/* Form Body */}
         <form onSubmit={handleSave} className="p-5 space-y-4 overflow-y-auto custom-scrollbar flex-1 text-xs">
-          {/* Read-Only Role & Division Notice */}
-          <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl flex items-start space-x-2.5">
-            <i className="fa-solid fa-shield-halal text-amber-600 text-sm mt-0.5"></i>
-            <div>
-              <span className="font-bold text-amber-900 block">Hak Akses & Peran Sistem</span>
-              <p className="text-[11px] text-amber-800 mt-0.5">
-                Peran (<strong>{currentUser.role}</strong>) dan Divisi Anda dikelola secara terpusat oleh Administrator UPT. Anda hanya dapat mengubah informasi profil pribadi.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div className="sm:col-span-2">
-              <label className="block font-bold text-slate-700 mb-1">Nama Lengkap & Gelar</label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={e => setFullName(e.target.value)}
-                required
-                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium focus:ring-2 focus:ring-hajj-600 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">Username / NIP Login</label>
-              <input
-                type="text"
-                value={username}
-                onChange={e => setUsername(e.target.value)}
-                required
-                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium focus:ring-2 focus:ring-hajj-600 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">Nomor WhatsApp / Kontak</label>
-              <input
-                type="text"
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
-                placeholder="0812xxxxxxxx"
-                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium focus:ring-2 focus:ring-hajj-600 focus:outline-none"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block font-bold text-slate-700 mb-1">Kata Sandi / PIN Masuk</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required
-                  className="w-full p-2.5 pr-10 bg-slate-50 border border-slate-300 rounded-xl font-medium focus:ring-2 focus:ring-hajj-600 focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700"
-                >
-                  <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
-                </button>
+          {activeTab === 'PROFIL' ? (
+            <>
+              {/* Read-Only Role & Division Notice */}
+              <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl flex items-start space-x-2.5">
+                <i className="fa-solid fa-shield-halal text-amber-600 text-sm mt-0.5"></i>
+                <div>
+                  <span className="font-bold text-amber-900 block">Hak Akses & Peran Sistem</span>
+                  <p className="text-[11px] text-amber-800 mt-0.5">
+                    Peran (<strong>{currentUser.role}</strong>) dan Divisi Anda dikelola secara terpusat oleh Administrator UPT. Anda hanya dapat mengubah informasi profil pribadi.
+                  </p>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Admin / Super Admin Web Title & Logo Settings */}
-          {isSuperAdmin(currentUser.role) && (
-            <div className="pt-4 border-t border-slate-200 space-y-3.5">
-              <div className="flex items-center space-x-2 text-hajj-800 font-bold">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div className="sm:col-span-2">
+                  <label className="block font-bold text-slate-700 mb-1">Nama Lengkap & Gelar</label>
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={e => setFullName(e.target.value)}
+                    required
+                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium focus:ring-2 focus:ring-hajj-600 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Username / NIP Login</label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
+                    required
+                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium focus:ring-2 focus:ring-hajj-600 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Nomor WhatsApp / Kontak</label>
+                  <input
+                    type="text"
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    placeholder="0812xxxxxxxx"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium focus:ring-2 focus:ring-hajj-600 focus:outline-none"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block font-bold text-slate-700 mb-1">Kata Sandi / PIN Masuk</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      required
+                      className="w-full p-2.5 pr-10 bg-slate-50 border border-slate-300 rounded-xl font-medium focus:ring-2 focus:ring-hajj-600 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700"
+                    >
+                      <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Admin / Super Admin Web Title & Logo Settings */
+            <div className="space-y-3.5">
+              <div className="flex items-center space-x-2 text-hajj-800 font-bold bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                 <i className="fa-solid fa-screwdriver-wrench text-gold-600"></i>
                 <span>Konfigurasi Khusus Administrator (Judul & Logo Web)</span>
               </div>

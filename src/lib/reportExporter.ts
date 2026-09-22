@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 import { Transaction, Maintenance, QcInspection, WorkSession, AuditLog, Room, User, ConsolidatedGroupRecord, GroupType } from '../types';
 import { formatIndonesianDate, formatRupiah, getRealTodayDate, addDaysToDateStr } from './utils';
-import { downloadHtmlContentAsPdf, downloadReportPdfDirect } from './pdfDownloader';
+import { downloadHtmlContentAsPdf, downloadReportPdfDirect, getReportSignatory } from './pdfDownloader';
 import { dataStorage } from '../services/dataStorage';
 
 export type ReportType = 'KAMAR' | 'MAINTENANCE' | 'QC' | 'SARAPAN' | 'JAM_KERJA' | 'AUDIT';
@@ -264,6 +264,12 @@ export function generateReportData(params: ReportExportParams) {
       }
     }
 
+    // Jika terdapat tipe rombongan, maka tidak perlu menampilkan tipe booking individu
+    const hasRombongan = filteredRombongan.length > 0;
+    if (hasRombongan) {
+      filteredIndividu = [];
+    }
+
     let rowCounter = 1;
 
     // 1. Baris Rombongan (tetap sebagai satu kesatuan rombongan dengan rincian gedung & kamar)
@@ -349,7 +355,7 @@ export function generateReportData(params: ReportExportParams) {
     summaryStats = [
       { label: 'Total Entitas Reservasi', value: filteredRombongan.length + filteredIndividu.length + filteredAula.length },
       { label: 'Rombongan Terdaftar', value: `${filteredRombongan.length} Grup (${totalRoomsRombongan} Kamar)` },
-      { label: 'Kamar Tamu Individu', value: `${filteredIndividu.length} Kamar` },
+      ...(hasRombongan ? [] : [{ label: 'Kamar Tamu Individu', value: `${filteredIndividu.length} Kamar` }]),
       { label: 'Sewa Ruang Pertemuan', value: `${filteredAula.length} Aula` },
       { 
         label: 'Check-In Aktif (Terisi)', 
@@ -729,6 +735,13 @@ export function exportToExcel(params: ReportExportParams) {
   const { title, filename, headers, rows, summaryStats } = generateReportData(params);
 
   const appSettings = dataStorage.getAppSettings();
+
+  // Determine Manager Signature according to report type
+  const signatory = getReportSignatory(params.type, params.currentUser);
+  const managerName = signatory.name;
+  const managerRole = signatory.role;
+  const managerNip = signatory.nip;
+
   // Construct sheet data with official header block
   const sheetData: (string | number)[][] = [
     [appSettings.organizationName],
@@ -759,8 +772,8 @@ export function exportToExcel(params: ReportExportParams) {
   sheetData.push(['', '', '', '', '', '', 'Mengetahui / Penanggung Jawab,']);
   sheetData.push(['']);
   sheetData.push(['']);
-  sheetData.push(['', '', '', '', '', '', '( ' + (params.currentUser?.fullName || 'Kepala UPT Asrama Haji') + ' )']);
-  sheetData.push(['', '', '', '', '', '', 'NIP. 19780512 200312 1 002']);
+  sheetData.push(['', '', '', '', '', '', '( ' + managerName + ' )']);
+  sheetData.push(['', '', '', '', '', '', `${managerNip} • ${managerRole}`]);
 
   const ws = XLSX.utils.aoa_to_sheet(sheetData);
 
@@ -1026,9 +1039,9 @@ export function exportToPDF(params: ReportExportParams) {
           <div>Jakarta, ${formatIndonesianDate(realToday)}</div>
           <div style="font-weight: bold; margin-top: 4px;">Mengetahui / Penanggung Jawab,</div>
           <div class="sign-space"></div>
-          <div style="font-weight: bold; text-decoration: underline;">${params.currentUser?.fullName || 'Ir. Hendra Kusuma'}</div>
-          <div style="color: #64748b; font-size: 9.5px;">${params.currentUser?.role || 'Kepala Divisi Operasional'}</div>
-          <div style="color: #94a3b8; font-size: 9px; margin-top: 2px;">NIP. 19800615 200501 1 003</div>
+          <div style="font-weight: bold; text-decoration: underline;">${getReportSignatory(params.type, params.currentUser).name}</div>
+          <div style="color: #64748b; font-size: 9.5px;">${getReportSignatory(params.type, params.currentUser).role}</div>
+          <div style="color: #94a3b8; font-size: 9px; margin-top: 2px;">${getReportSignatory(params.type, params.currentUser).nip}</div>
         </div>
       </div>
 

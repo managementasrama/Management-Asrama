@@ -559,6 +559,65 @@ function calculateReportColumnWidths(headers: string[], reportType?: string, tab
 }
 
 /**
+ * Menentukan pejabat penandatangan (TTD) resmi berdasarkan jenis laporan
+ * Pemesanan/Kamar/Rombongan -> Manager Resepsionis
+ * Pesanan Dapur/Sarapan/Konsumsi -> Manager Koperasi
+ * Kerusakan/Maintenance/Teknisi -> Manager Teknisi
+ * QC -> Manager QC
+ * Audit/Jam Kerja -> Kepala UPT / Super Admin
+ */
+export function getReportSignatory(reportType: string, currentUser?: { fullName?: string; role?: string }) {
+  const normType = (reportType || '').toUpperCase();
+
+  // 1. Pesanan Dapur / Sarapan / Konsumsi / Katering -> Manager Koperasi
+  if (normType === 'SARAPAN' || normType.includes('DAPUR') || normType.includes('KONSUMSI') || normType.includes('KATERING')) {
+    const isMatchingManager = currentUser?.role && (currentUser.role.includes('Koperasi') && currentUser.role.includes('Manager'));
+    return {
+      name: isMatchingManager && currentUser?.fullName ? currentUser.fullName : 'Hj. Rina Marlina',
+      role: 'Manager Koperasi & Konsumsi',
+      nip: 'NIP. 19820917 200801 2 006'
+    };
+  }
+
+  // 2. Pemeliharaan & Kerusakan Teknisi -> Manager Teknisi
+  if (normType === 'MAINTENANCE' || normType.includes('TEKNISI') || normType.includes('PERBAIKAN')) {
+    const isMatchingManager = currentUser?.role && (currentUser.role.includes('Teknisi') && currentUser.role.includes('Manager'));
+    return {
+      name: isMatchingManager && currentUser?.fullName ? currentUser.fullName : 'H. Joko Susilo, ST',
+      role: 'Manager Teknisi & Sarpras',
+      nip: 'NIP. 19800311 200701 1 008'
+    };
+  }
+
+  // 3. Pengawasan Mutu & Kebersihan -> Manager Quality Control
+  if (normType === 'QC') {
+    const isMatchingManager = currentUser?.role && (currentUser.role.includes('QC') && currentUser.role.includes('Manager'));
+    return {
+      name: isMatchingManager && currentUser?.fullName ? currentUser.fullName : 'Ir. Hendra Kusuma',
+      role: 'Manager Quality Control',
+      nip: 'NIP. 19790822 200604 1 005'
+    };
+  }
+
+  // 4. Audit & Jam Kerja -> Kepala UPT Asrama Haji Jakarta
+  if (normType === 'AUDIT' || normType === 'JAM_KERJA') {
+    return {
+      name: 'Ahmad Faisal',
+      role: 'Super Admin / Kepala UPT',
+      nip: 'NIP. 19750101 200003 1 001'
+    };
+  }
+
+  // 5. Default: Laporan Pemesanan Kamar / Hunian / Reservasi / Rombongan -> Manager Resepsionis
+  const isMatchingManager = currentUser?.role && (currentUser.role.includes('Resepsionis') && currentUser.role.includes('Manager'));
+  return {
+    name: isMatchingManager && currentUser?.fullName ? currentUser.fullName : 'Dra. Hj. Siti Rahmah',
+    role: 'Manager Resepsionis',
+    nip: 'NIP. 19780514 200501 2 003'
+  };
+}
+
+/**
  * Downloads tabular reports (Kamar, Maintenance, QC, Sarapan, dll) directly as crisp official PDF.
  * Implements precision multi-line wrapping and single manager signature.
  */
@@ -731,34 +790,11 @@ export function downloadReportPdfDirect(
       rowY += rowHeight;
     });
 
-    // 1 Signature Only: Manager yang bersangkutan
-    let managerName = 'Dra. Hj. Siti Rahmah';
-    let managerRole = 'Manager Resepsionis';
-    let managerNip = 'NIP. 19780514 200501 2 003';
-
-    if (reportType === 'MAINTENANCE') {
-      managerName = 'H. Joko Susilo, ST';
-      managerRole = 'Manager Teknisi & Sarpras';
-      managerNip = 'NIP. 19800311 200701 1 008';
-    } else if (reportType === 'QC') {
-      managerName = 'Ir. Hendra Kusuma';
-      managerRole = 'Manager Quality Control';
-      managerNip = 'NIP. 19790822 200604 1 005';
-    } else if (reportType === 'SARAPAN') {
-      managerName = 'Hj. Rina Marlina';
-      managerRole = 'Manager Koperasi & Konsumsi';
-      managerNip = 'NIP. 19820917 200801 2 006';
-    } else if (reportType === 'AUDIT' || reportType === 'JAM_KERJA') {
-      managerName = 'Ahmad Faisal';
-      managerRole = 'Super Admin / Kepala UPT';
-      managerNip = 'NIP. 19750101 200003 1 001';
-    }
-
-    // Override with active user if user is already the manager
-    if (officerRole && officerRole.toLowerCase().includes('manager')) {
-      managerName = officerName;
-      managerRole = officerRole;
-    }
+    // 1 Signature Only: Manager yang bersangkutan sesuai tupoksi laporan
+    const signatory = getReportSignatory(reportType || '', { fullName: officerName, role: officerRole });
+    const managerName = signatory.name;
+    const managerRole = signatory.role;
+    const managerNip = signatory.nip;
 
     // Check if signature fits on current page (needs ~30mm)
     if (rowY + 32 > 198) {

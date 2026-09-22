@@ -194,42 +194,42 @@ export function ReportsView() {
                   return (
                     <div 
                       key={grp.key}
-                      className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs hover:border-purple-300 transition"
+                      className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-2xs hover:border-purple-300 dark:hover:border-purple-600 transition"
                     >
                       {/* Rombongan Header Banner */}
-                      <div className="p-4 bg-gradient-to-r from-purple-50/70 via-white to-slate-50 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                      <div className="p-4 bg-gradient-to-r from-purple-50/70 via-white to-slate-50 dark:from-purple-950/40 dark:via-slate-800 dark:to-slate-850 border-b border-slate-200 dark:border-slate-700 flex flex-col md:flex-row md:items-center justify-between gap-3">
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 uppercase tracking-wide">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 dark:bg-purple-900/60 text-purple-800 dark:text-purple-200 border border-purple-200 dark:border-purple-800 uppercase tracking-wide">
                               {grp.groupType === 'INSTANSI' ? 'Instansi / Lembaga' : grp.groupType === 'JEMAAH_HAJI' ? 'Jemaah Haji Akbar' : 'Rombongan Umum'}
                             </span>
-                            <h5 className="text-sm font-bold text-slate-900">
+                            <h5 className="text-sm font-bold text-slate-900 dark:text-slate-100">
                               {grp.groupName}
                             </h5>
                             {grp.kloter && (
-                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-800 border border-blue-200">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700">
                                 Kloter: {grp.kloter}
                               </span>
                             )}
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                               grp.status === 'TERISI' 
-                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
+                                ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700' 
                                 : grp.status === 'BOOKED'
-                                ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                                ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
                                 : grp.status === 'SELESAI'
-                                ? 'bg-slate-100 text-slate-700 border border-slate-300'
-                                : 'bg-red-100 text-red-800 border border-red-300'
+                                ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600'
+                                : 'bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-700'
                             }`}>
                               {grp.status === 'TERISI' ? 'Check-In (Aktif)' : grp.status === 'BOOKED' ? 'Reservasi Terjadwal' : grp.status}
                             </span>
                           </div>
 
-                          <div className="text-xs text-slate-600 flex flex-wrap items-center gap-x-4 gap-y-1 pt-1">
-                            <span>PIC: <strong className="text-slate-800">{grp.groupPic}</strong> ({grp.groupPicPhone})</span>
+                          <div className="text-xs text-slate-600 dark:text-slate-400 flex flex-wrap items-center gap-x-4 gap-y-1 pt-1">
+                            <span>PIC: <strong className="text-slate-800 dark:text-slate-200">{grp.groupPic}</strong> ({grp.groupPicPhone})</span>
                             {grp.agencyOrDocument && (
-                              <span>Dokumen/SPK: <span className="font-mono text-slate-700">{grp.agencyOrDocument}</span></span>
+                              <span>Dokumen/SPK: <span className="font-mono text-slate-700 dark:text-slate-300">{grp.agencyOrDocument}</span></span>
                             )}
-                            <span>Jadwal: <strong className="text-slate-800">{formatIndonesianDate(grp.startDate)}</strong> s.d. <strong className="text-slate-800">{formatIndonesianDate(checkoutDate)}</strong> ({grp.duration} {grp.durationUnit})</span>
+                            <span>Jadwal: <strong className="text-slate-800 dark:text-slate-200">{formatIndonesianDate(grp.startDate)}</strong> s.d. <strong className="text-slate-800 dark:text-slate-200">{formatIndonesianDate(checkoutDate)}</strong> ({grp.duration} {grp.durationUnit})</span>
                           </div>
                         </div>
 
@@ -249,10 +249,10 @@ export function ReportsView() {
                             <button
                               type="button"
                               onClick={() => openModal('modalExtend', { transaction: grp.representativeTx })}
-                              className="px-2.5 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold rounded-lg text-xs border border-teal-200 flex items-center space-x-1 transition cursor-pointer"
+                              className="px-2.5 py-1.5 bg-teal-50 dark:bg-teal-950/50 hover:bg-teal-100 dark:hover:bg-teal-900/60 text-teal-800 dark:text-teal-300 font-bold rounded-lg text-xs border border-teal-200 dark:border-teal-700 flex items-center space-x-1 transition cursor-pointer"
                               title="Perpanjang durasi rombongan"
                             >
-                              <i className="fa-solid fa-clock-rotate-left text-teal-600"></i>
+                              <i className="fa-solid fa-clock-rotate-left text-teal-600 dark:text-teal-400"></i>
                               <span>Extend</span>
                             </button>
                           )}
@@ -260,10 +260,10 @@ export function ReportsView() {
                           <button
                             type="button"
                             onClick={() => toggleGroupExpand(grp.key)}
-                            className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs border border-slate-300 flex items-center space-x-1 transition cursor-pointer"
+                            className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold rounded-lg text-xs border border-slate-300 dark:border-slate-600 flex items-center space-x-1 transition cursor-pointer"
                             title={isExpanded ? "Tutup rincian kamar" : "Buka rincian kamar rombongan"}
                           >
-                            <i className={`fa-solid ${isExpanded ? 'fa-chevron-up' : 'fa-chevron-down'} text-slate-500 text-[11px]`}></i>
+                            <i className={`fa-solid ${isExpanded ? 'fa-chevron-up' : 'fa-chevron-down'} text-slate-500 dark:text-slate-400 text-[11px]`}></i>
                             <span>{isExpanded ? 'Tutup Rincian' : `Rincian Kamar (${grp.allRoomNumbers.length})`}</span>
                           </button>
                         </div>
@@ -273,12 +273,12 @@ export function ReportsView() {
                       <div className="p-4 space-y-3 text-xs">
                         {/* Rincian Gedung Sampai Kamar */}
                         <div>
-                          <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center justify-between">
+                          <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
                             <span className="flex items-center gap-1.5">
-                              <i className="fa-solid fa-building text-slate-400"></i>
+                              <i className="fa-solid fa-building text-slate-400 dark:text-slate-500"></i>
                               <span>Gedung & Kamar yang Disewa ({grp.allRoomNumbers.length} Kamar • {grp.totalPax} Pax):</span>
                             </span>
-                            <span className="text-[10px] text-slate-400 font-normal">
+                            <span className="text-[10px] text-slate-400 dark:text-slate-400 font-normal">
                               {grp.buildingsList.length} Gedung: {grp.buildingsList.join(', ')}
                             </span>
                           </div>
@@ -286,13 +286,13 @@ export function ReportsView() {
                           {/* Grid Gedung Cards */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
                             {grp.roomsBreakdown.map((bBlock) => (
-                              <div key={bBlock.building} className="p-3 bg-slate-50/80 rounded-lg border border-slate-200">
-                                <div className="font-bold text-slate-900 flex items-center justify-between pb-1.5 border-b border-slate-200 mb-2">
-                                  <span className="flex items-center gap-1.5 text-hajj-800">
-                                    <i className="fa-solid fa-hotel text-gold-600 text-xs"></i>
+                              <div key={bBlock.building} className="p-3 bg-slate-50/80 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-700">
+                                <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center justify-between pb-1.5 border-b border-slate-200 dark:border-slate-700 mb-2">
+                                  <span className="flex items-center gap-1.5 text-hajj-800 dark:text-emerald-400">
+                                    <i className="fa-solid fa-hotel text-gold-600 dark:text-gold-400 text-xs"></i>
                                     <span>{bBlock.building}</span>
                                   </span>
-                                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-white text-slate-700 border border-slate-200 font-bold">
+                                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 font-bold">
                                     {bBlock.rooms.length} Kamar
                                   </span>
                                 </div>
@@ -302,10 +302,10 @@ export function ReportsView() {
                                       key={rm.roomNumber} 
                                       className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-mono font-bold ${
                                         rm.status === 'TERISI' 
-                                          ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                                          ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700'
                                           : rm.status === 'BOOKED'
-                                          ? 'bg-blue-100 text-blue-900 border border-blue-300'
-                                          : 'bg-white text-slate-800 border border-slate-300'
+                                          ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-900 dark:text-blue-200 border border-blue-300 dark:border-blue-700'
+                                          : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-600'
                                       }`}
                                       title={`Kamar ${rm.roomNumber} - ${rm.type} (${rm.capacity} Bed) - ${rm.status}`}
                                     >
@@ -320,61 +320,61 @@ export function ReportsView() {
 
                         {/* Fasilitas Ruang Pertemuan (Aula) Terkait */}
                         {(grp.includeAula || grp.rentAulaName) && (
-                          <div className="p-3 rounded-lg bg-purple-50/80 border border-purple-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                          <div className="p-3 rounded-lg bg-purple-50/80 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                             <div className="flex items-start gap-2.5">
                               <div className="w-8 h-8 rounded-lg bg-purple-700 text-gold-300 flex items-center justify-center shrink-0">
                                 <i className="fa-solid fa-landmark text-xs"></i>
                               </div>
                               <div>
-                                <span className="text-[10px] font-bold text-purple-700 uppercase tracking-wider block">
+                                <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300 uppercase tracking-wider block">
                                   Sewa Ruang Pertemuan (Aula) Terpadu
                                 </span>
-                                <h6 className="font-bold text-slate-900 text-xs">
+                                <h6 className="font-bold text-slate-900 dark:text-slate-100 text-xs">
                                   {grp.rentAulaName || 'Aula Serbaguna Utama'}
                                 </h6>
-                                <p className="text-[11px] text-purple-900">
+                                <p className="text-[11px] text-purple-900 dark:text-purple-200">
                                   Sesi: {grp.rentAulaSession || 'Sesi Acara Reguler'} • Durasi: {grp.rentAulaDuration || 1} Sesi • Kapasitas: 250 - 500 Pax (Format Seminar)
                                 </p>
                               </div>
                             </div>
-                            <span className="text-[10px] px-2.5 py-1 bg-purple-100 text-purple-800 font-bold rounded-md border border-purple-300 self-start sm:self-auto">
+                            <span className="text-[10px] px-2.5 py-1 bg-purple-100 dark:bg-purple-900/60 text-purple-800 dark:text-purple-200 font-bold rounded-md border border-purple-300 dark:border-purple-700 self-start sm:self-auto">
                               Fasilitas Lengkap Gedung SG
                             </span>
                           </div>
                         )}
 
                         {/* Info Konsumsi & Tambahan */}
-                        <div className="flex flex-wrap items-center gap-3 pt-1 text-slate-600 text-[11px]">
+                        <div className="flex flex-wrap items-center gap-3 pt-1 text-slate-600 dark:text-slate-400 text-[11px]">
                           <div className="flex items-center gap-1.5">
-                            <i className="fa-solid fa-utensils text-slate-400"></i>
+                            <i className="fa-solid fa-utensils text-slate-400 dark:text-slate-500"></i>
                             <span>Layanan Konsumsi:</span>
                             {grp.cateringPackage && grp.cateringPackage !== 'TIDAK' ? (
-                              <strong className="text-orange-700">
+                              <strong className="text-orange-700 dark:text-orange-300">
                                 {grp.cateringPackage} ({grp.cateringPaxCount || grp.totalPax} Pack)
                               </strong>
                             ) : grp.breakfast ? (
-                              <strong className="text-emerald-700">
+                              <strong className="text-emerald-700 dark:text-emerald-300">
                                 Sarapan Pagi ({grp.breakfastPortions || grp.totalPax} Porsi)
                               </strong>
                             ) : (
-                              <span className="text-slate-500 font-medium">Tidak Pakai Konsumsi (0 Pack)</span>
+                              <span className="text-slate-500 dark:text-slate-400 font-medium">Tidak Pakai Konsumsi (0 Pack)</span>
                             )}
                           </div>
 
                           {grp.extraBed && (
                             <div className="flex items-center gap-1.5">
-                              <i className="fa-solid fa-mattress-pillow text-indigo-600"></i>
-                              <strong className="text-indigo-700">+{grp.extraBedCount || 1} Unit Extra Bed</strong>
+                              <i className="fa-solid fa-mattress-pillow text-indigo-600 dark:text-indigo-400"></i>
+                              <strong className="text-indigo-700 dark:text-indigo-300">+{grp.extraBedCount || 1} Unit Extra Bed</strong>
                             </div>
                           )}
                         </div>
 
                         {/* Detail Expandable Table: Rincian Kamar Per Kamar */}
                         {isExpanded && (
-                          <div className="mt-3 pt-3 border-t border-slate-200 overflow-x-auto">
+                          <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 overflow-x-auto">
                             <table className="w-full text-left border-collapse text-xs">
                               <thead>
-                                <tr className="bg-slate-100 text-slate-700 border-b border-slate-200 font-semibold text-[11px]">
+                                <tr className="bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 font-semibold text-[11px]">
                                   <th className="py-2 px-3 w-8 text-center">No</th>
                                   <th className="py-2 px-3">Gedung & Wilayah</th>
                                   <th className="py-2 px-3 font-mono">No. Kamar</th>
@@ -383,22 +383,22 @@ export function ReportsView() {
                                   <th className="py-2 px-3 text-center">Status Alokasi</th>
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-slate-200 text-slate-800">
+                              <tbody className="divide-y divide-slate-200 dark:divide-slate-700 text-slate-800 dark:text-slate-200">
                                 {grp.roomsBreakdown.flatMap((b, bIdx) => 
                                   b.rooms.map((rm, rmIdx) => (
-                                    <tr key={`${b.building}-${rm.roomNumber}`} className="hover:bg-slate-50/70">
-                                      <td className="py-2 px-3 text-center text-slate-400">{rmIdx + 1}</td>
-                                      <td className="py-2 px-3 font-semibold text-slate-800">{b.building}</td>
-                                      <td className="py-2 px-3 font-bold font-mono text-purple-900">{rm.roomNumber}</td>
-                                      <td className="py-2 px-3 text-slate-600">{rm.type} (AC, Kamar Mandi Dalam)</td>
+                                    <tr key={`${b.building}-${rm.roomNumber}`} className="hover:bg-slate-50/70 dark:hover:bg-slate-700/50">
+                                      <td className="py-2 px-3 text-center text-slate-400 dark:text-slate-500">{rmIdx + 1}</td>
+                                      <td className="py-2 px-3 font-semibold text-slate-800 dark:text-slate-200">{b.building}</td>
+                                      <td className="py-2 px-3 font-bold font-mono text-purple-900 dark:text-purple-300">{rm.roomNumber}</td>
+                                      <td className="py-2 px-3 text-slate-600 dark:text-slate-400">{rm.type} (AC, Kamar Mandi Dalam)</td>
                                       <td className="py-2 px-3 text-center font-medium">{rm.capacity} Orang</td>
                                       <td className="py-2 px-3 text-center">
                                         <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
                                           rm.status === 'TERISI' 
-                                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
+                                            ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700' 
                                             : rm.status === 'BOOKED'
-                                            ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                                            : 'bg-slate-100 text-slate-700'
+                                            ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
+                                            : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
                                         }`}>
                                           {rm.status === 'TERISI' ? 'Check-In' : rm.status === 'BOOKED' ? 'Reservasi' : rm.status}
                                         </span>
@@ -437,9 +437,9 @@ export function ReportsView() {
               </div>
             </div>
 
-            <div className="overflow-x-auto border border-slate-200 rounded-xl">
-              <table className="w-full text-left text-xs text-slate-700">
-                <thead className="bg-slate-100 uppercase text-slate-600 font-bold border-b border-slate-200">
+            <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-xl">
+              <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+                <thead className="bg-slate-100 dark:bg-slate-900 uppercase text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700">
                   <tr>
                     <th className="p-3">ID Transaksi</th>
                     <th className="p-3">Gedung & No Kamar</th>
@@ -453,7 +453,7 @@ export function ReportsView() {
                     <th className="p-3 text-center">Aksi Dokumen</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-850">
                   {individuList.length === 0 ? (
                     <tr>
                       <td colSpan={10} className="p-6 text-center text-slate-400 italic">
@@ -464,28 +464,28 @@ export function ReportsView() {
                     individuList.map(tx => {
                       const checkoutDate = addDaysToDateStr(tx.startDate, tx.duration);
                       return (
-                        <tr key={tx.id} className="hover:bg-slate-50 transition">
-                          <td className="p-3 font-bold font-mono text-emerald-800">{tx.id}</td>
-                          <td className="p-3 font-bold text-slate-800">
+                        <tr key={tx.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
+                          <td className="p-3 font-bold font-mono text-emerald-800 dark:text-emerald-400">{tx.id}</td>
+                          <td className="p-3 font-bold text-slate-800 dark:text-slate-200">
                             {tx.roomNumber} 
                             <span className="block text-[10px] font-normal text-slate-400">{tx.building}</span>
                           </td>
                           <td className="p-3">
-                            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-medium">
+                            <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-medium border border-slate-200 dark:border-slate-700">
                               {tx.category}
                             </span>
                           </td>
-                          <td className="p-3 font-semibold text-slate-900">
+                          <td className="p-3 font-semibold text-slate-900 dark:text-slate-100">
                             {tx.guestName}
-                            {tx.kloter && <span className="block text-[10px] text-blue-600 font-normal">Kloter: {tx.kloter}</span>}
+                            {tx.kloter && <span className="block text-[10px] text-blue-600 dark:text-blue-400 font-normal">Kloter: {tx.kloter}</span>}
                           </td>
-                          <td className="p-3 font-medium">{formatIndonesianDate(tx.startDate)}</td>
-                          <td className="p-3 font-medium text-slate-600">{formatIndonesianDate(checkoutDate)}</td>
-                          <td className="p-3 font-semibold">{tx.duration} {tx.durationUnit || 'Malam'}</td>
+                          <td className="p-3 font-medium text-slate-800 dark:text-slate-200">{formatIndonesianDate(tx.startDate)}</td>
+                          <td className="p-3 font-medium text-slate-600 dark:text-slate-400">{formatIndonesianDate(checkoutDate)}</td>
+                          <td className="p-3 font-semibold text-slate-800 dark:text-slate-200">{tx.duration} {tx.durationUnit || 'Malam'}</td>
                           <td className="p-3">
                             <div className="space-y-1">
                               {tx.extraBed ? (
-                                <div className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                                <div className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                                   <i className="fa-solid fa-mattress-pillow mr-1"></i>
                                   +{tx.extraBedCount || 1} Extra Bed
                                 </div>
@@ -493,17 +493,17 @@ export function ReportsView() {
 
                               {tx.breakfast ? (
                                 <div>
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-800 border border-orange-200" title={tx.breakfastMenu}>
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-orange-100 dark:bg-orange-950/60 text-orange-800 dark:text-orange-300 border border-orange-200 dark:border-orange-800" title={tx.breakfastMenu}>
                                     <i className="fa-solid fa-utensils mr-1"></i>
                                     {tx.breakfastMenu || 'Pesan Sarapan'}
                                   </span>
-                                  <div className="text-[10px] text-slate-500 font-medium mt-0.5">
+                                  <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
                                     {tx.breakfastPortions || 1} Porsi × {tx.breakfastDays || tx.duration || 1} Hari
                                   </div>
                                 </div>
                               ) : (
                                 !tx.extraBed && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-500">
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
                                     <i className="fa-solid fa-minus mr-1"></i> Standar
                                   </span>
                                 )
@@ -513,12 +513,12 @@ export function ReportsView() {
                           <td className="p-3 text-center">
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                               tx.status === 'TERISI' 
-                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
+                                ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700' 
                                 : tx.status === 'BOOKED'
-                                ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                                ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
                                 : tx.status === 'SELESAI'
-                                ? 'bg-slate-100 text-slate-700 border border-slate-300'
-                                : 'bg-red-100 text-red-800 border border-red-300'
+                                ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600'
+                                : 'bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-700'
                             }`}>
                               {tx.status}
                             </span>
@@ -528,20 +528,20 @@ export function ReportsView() {
                               <button
                                 type="button"
                                 onClick={() => openModal('modalInvoice', { transaction: tx })}
-                                className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-800 font-bold rounded-lg text-xs border border-slate-300 shadow-2xs flex items-center space-x-1 transition cursor-pointer"
+                                className="px-2.5 py-1 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold rounded-lg text-xs border border-slate-300 dark:border-slate-600 shadow-2xs flex items-center space-x-1 transition cursor-pointer"
                                 title="Lihat Invoice Dokumen Resmi"
                               >
-                                <i className="fa-solid fa-file-invoice text-emerald-700"></i>
+                                <i className="fa-solid fa-file-invoice text-emerald-700 dark:text-emerald-400"></i>
                                 <span>Invoice</span>
                               </button>
                               {(tx.status === 'TERISI' || tx.status === 'BOOKED') && (
                                 <button
                                   type="button"
                                   onClick={() => openModal('modalExtend', { transaction: tx })}
-                                  className="px-2 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold rounded-lg text-xs border border-teal-200 flex items-center space-x-1 transition cursor-pointer"
+                                  className="px-2 py-1 bg-teal-50 dark:bg-teal-950/50 hover:bg-teal-100 dark:hover:bg-teal-900/60 text-teal-800 dark:text-teal-300 font-bold rounded-lg text-xs border border-teal-200 dark:border-teal-700 flex items-center space-x-1 transition cursor-pointer"
                                   title="Perpanjang durasi menginap"
                                 >
-                                  <i className="fa-solid fa-clock-rotate-left text-teal-600"></i>
+                                  <i className="fa-solid fa-clock-rotate-left text-teal-600 dark:text-teal-400"></i>
                                   <span>Extend</span>
                                 </button>
                               )}
@@ -561,23 +561,23 @@ export function ReportsView() {
         {/* BAGIAN 3: TABEL RUANGAN (RUANG PERTEMUAN / AULA) */}
         {/* ========================================================================= */}
         {(activeTab === 'ALL' || activeTab === 'AULA') && (
-          <div className="space-y-2 pt-4 border-t border-slate-200">
+          <div className="space-y-2 pt-4 border-t border-slate-200 dark:border-slate-700">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
-                <h4 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                  <i className="fa-solid fa-landmark text-indigo-600"></i>
+                <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm flex items-center gap-1.5">
+                  <i className="fa-solid fa-landmark text-indigo-600 dark:text-indigo-400"></i>
                   <span>Laporan Penyewaan Ruang Pertemuan (Aula / Auditorium / Gedung SG)</span>
                 </h4>
-                <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-bold">
+                <span className="px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-300 text-[10px] font-bold border border-indigo-200 dark:border-indigo-800">
                   {aulaList.length} Penyewaan Aula
                 </span>
               </div>
             </div>
 
-            <div className="overflow-x-auto border border-slate-200 rounded-xl">
-              <table className="w-full text-left text-xs text-slate-700">
-                <thead className="bg-slate-100 uppercase text-slate-600 font-bold border-b border-slate-200">
+            <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-xl">
+              <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+                <thead className="bg-slate-100 dark:bg-slate-900 uppercase text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700">
                   <tr>
                     <th className="p-3">ID Transaksi</th>
                     <th className="p-3">Nama Ruang Pertemuan / Aula</th>
@@ -591,7 +591,7 @@ export function ReportsView() {
                     <th className="p-3 text-center">Aksi Dokumen</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-850">
                   {aulaList.length === 0 ? (
                     <tr>
                       <td colSpan={10} className="p-6 text-center text-slate-400 italic">
@@ -603,36 +603,36 @@ export function ReportsView() {
                       const aulaDaysCount = Math.max(1, Math.ceil(tx.duration / 24));
                       const endDateStr = addDaysToDateStr(tx.startDate, aulaDaysCount - 1);
                       return (
-                      <tr key={tx.id} className="hover:bg-slate-50 transition">
-                        <td className="p-3 font-bold font-mono text-indigo-800">{tx.id}</td>
-                        <td className="p-3 font-bold text-slate-900">
-                          <i className="fa-solid fa-landmark text-indigo-600 mr-1.5"></i>
+                      <tr key={tx.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
+                        <td className="p-3 font-bold font-mono text-indigo-800 dark:text-indigo-400">{tx.id}</td>
+                        <td className="p-3 font-bold text-slate-900 dark:text-slate-100">
+                          <i className="fa-solid fa-landmark text-indigo-600 dark:text-indigo-400 mr-1.5"></i>
                           {tx.roomNumber}
                         </td>
-                        <td className="p-3 font-semibold text-slate-800">
+                        <td className="p-3 font-semibold text-slate-800 dark:text-slate-200">
                           {tx.guestName}
                           {tx.phone && <span className="block text-[10px] text-slate-400 font-normal">Telp: {tx.phone}</span>}
                         </td>
-                        <td className="p-3 font-medium text-slate-900">{formatIndonesianDate(tx.startDate)}</td>
-                        <td className="p-3 font-medium text-emerald-800">{formatIndonesianDate(endDateStr)}</td>
+                        <td className="p-3 font-medium text-slate-900 dark:text-slate-100">{formatIndonesianDate(tx.startDate)}</td>
+                        <td className="p-3 font-medium text-emerald-800 dark:text-emerald-400">{formatIndonesianDate(endDateStr)}</td>
                         <td className="p-3">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${tx.duration >= 24 ? 'bg-purple-100 text-purple-800 border border-purple-200' : 'bg-blue-100 text-blue-800 border border-blue-200'}`}>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${tx.duration >= 24 ? 'bg-purple-100 dark:bg-purple-900/60 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800' : 'bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800'}`}>
                             {tx.duration} Jam {tx.duration >= 24 ? `(${aulaDaysCount} Hari Penuh)` : '(Sesi Harian)'}
                           </span>
                         </td>
-                        <td className="p-3 text-slate-600 max-w-xs truncate" title={tx.notes || '-'}>
+                        <td className="p-3 text-slate-600 dark:text-slate-300 max-w-xs truncate" title={tx.notes || '-'}>
                           {tx.notes || '-'}
                         </td>
-                        <td className="p-3 text-slate-500 font-medium">{tx.createdUser || 'Resepsionis'}</td>
+                        <td className="p-3 text-slate-500 dark:text-slate-400 font-medium">{tx.createdUser || 'Resepsionis'}</td>
                         <td className="p-3 text-center">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                             tx.status === 'BOOKED' 
-                              ? 'bg-purple-100 text-purple-800 border border-purple-300' 
+                              ? 'bg-purple-100 dark:bg-purple-900/60 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-800' 
                               : tx.status === 'TERISI'
-                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
                               : tx.status === 'SELESAI'
-                              ? 'bg-slate-100 text-slate-700 border border-slate-300'
-                              : 'bg-red-100 text-red-800 border border-red-300'
+                              ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600'
+                              : 'bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-700'
                           }`}>
                             {tx.status === 'BOOKED' ? 'Booked (Terjadwal)' : tx.status}
                           </span>
@@ -642,10 +642,10 @@ export function ReportsView() {
                             <button
                               type="button"
                               onClick={() => openModal('modalInvoice', { transaction: tx })}
-                              className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-800 font-bold rounded-lg text-xs border border-slate-300 shadow-2xs flex items-center space-x-1 transition cursor-pointer"
+                              className="px-2.5 py-1 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold rounded-lg text-xs border border-slate-300 dark:border-slate-600 shadow-2xs flex items-center space-x-1 transition cursor-pointer"
                               title="Lihat Invoice Rincian Sewa Ruang Pertemuan (Tanpa Harga)"
                             >
-                              <i className="fa-solid fa-file-invoice text-indigo-600"></i>
+                              <i className="fa-solid fa-file-invoice text-indigo-600 dark:text-indigo-400"></i>
                               <span>Invoice</span>
                             </button>
                             {(tx.status === 'BOOKED' || tx.status === 'TERISI') && (
@@ -1163,16 +1163,21 @@ export function BreakfastOrdersView() {
     // Check if any transaction with breakfast is not yet in breakfastOrders list
     transactions.forEach(tx => {
       if (tx.breakfast && tx.building !== 'Ruang Pertemuan') {
-        const exists = list.some(o => o.transactionId === tx.id || (o.roomNumber === tx.roomNumber && o.guestName === tx.guestName));
+        const fullTxId = tx.id;
+        const exists = list.some(o => 
+          (o.transactionId && o.transactionId === fullTxId) || 
+          o.id === `BO-TX-${fullTxId}` || 
+          (o.roomNumber === tx.roomNumber && o.startDate === tx.startDate && o.guestName === tx.guestName)
+        );
         if (!exists) {
           list.push({
-            id: `BO-TX-${tx.id.substring(0, 6)}`,
+            id: `BO-TX-${fullTxId}`,
             roomNumber: tx.roomNumber,
             building: tx.building,
             guestName: tx.guestName,
             phone: tx.phone,
             kloter: tx.kloter,
-            transactionId: tx.id,
+            transactionId: fullTxId,
             menuName: tx.breakfastMenu || 'Nasi Goreng Spesial & Telur Ceplok',
             portions: tx.breakfastPortions || 4,
             days: tx.breakfastDays || tx.duration || 1,
@@ -1189,8 +1194,21 @@ export function BreakfastOrdersView() {
       }
     });
 
+    // Ensure strict uniqueness of IDs across all items to prevent any React duplicate key warnings
+    const seenIds = new Set<string>();
+    const uniqueOrders: typeof list = [];
+    list.forEach((order, idx) => {
+      let uniqueId = order.id;
+      if (!uniqueId || seenIds.has(uniqueId)) {
+        uniqueId = `${uniqueId || 'BO'}-${order.transactionId || order.roomNumber || 'order'}-${idx + 1}`;
+        order = { ...order, id: uniqueId };
+      }
+      seenIds.add(uniqueId);
+      uniqueOrders.push(order);
+    });
+
     // Sort: First by whether the associated room is checked-in (TERISI)
-    return list.sort((a, b) => {
+    return uniqueOrders.sort((a, b) => {
       const txA = transactions.find(t => t.id === a.transactionId || t.roomNumber === a.roomNumber);
       const txB = transactions.find(t => t.id === b.transactionId || t.roomNumber === b.roomNumber);
       const isCheckedInA = txA?.status === 'TERISI';
@@ -1640,13 +1658,13 @@ export function BreakfastOrdersView() {
                       </td>
                     </tr>
                   ) : (
-                    filteredOrders.map(order => {
+                    filteredOrders.map((order, orderIdx) => {
                       const tx = transactions.find(t => t.id === order.transactionId || t.roomNumber === order.roomNumber);
                       const isCheckedIn = tx?.status === 'TERISI';
                       const bStatus = order.status || 'MENUNGGU';
 
                       return (
-                        <tr key={order.id} className={`transition ${isCheckedIn ? 'bg-emerald-50/20 hover:bg-emerald-50/40 border-l-4 border-l-emerald-500' : 'hover:bg-slate-50'}`}>
+                        <tr key={`${order.id || 'bo'}-${order.roomNumber || ''}-${orderIdx}`} className={`transition ${isCheckedIn ? 'bg-emerald-50/20 hover:bg-emerald-50/40 border-l-4 border-l-emerald-500' : 'hover:bg-slate-50'}`}>
                           <td className="p-3">
                             <div className="flex items-center space-x-1.5">
                               <span className="font-bold text-slate-900 text-sm">{order.roomNumber}</span>

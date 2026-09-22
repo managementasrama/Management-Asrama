@@ -4187,6 +4187,7 @@ export function Modals() {
       <AccountProfileModal
         isOpen={Boolean(modalState.modalAccountProfile?.isOpen)}
         onClose={() => closeModal('modalAccountProfile')}
+        initialSection={modalState.modalAccountProfile?.data?.section}
       />
     </>
   );

@@ -290,18 +290,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   });
 
   const toggleDarkMode = () => {
-    setIsDarkMode(prev => {
-      const next = !prev;
-      localStorage.setItem('upt_haji_dark_mode', String(next));
-      if (next) {
-        document.documentElement.classList.add('dark');
-        showToast("Mode Gelap diaktifkan", "info");
-      } else {
-        document.documentElement.classList.remove('dark');
-        showToast("Mode Terang diaktifkan", "info");
-      }
-      return next;
-    });
+    const next = !isDarkMode;
+    setIsDarkMode(next);
+    localStorage.setItem('upt_haji_dark_mode', String(next));
+    if (next) {
+      document.documentElement.classList.add('dark');
+      showToast("Mode Gelap diaktifkan", "info");
+    } else {
+      document.documentElement.classList.remove('dark');
+      showToast("Mode Terang diaktifkan", "info");
+    }
   };
 
   useEffect(() => {
@@ -979,6 +977,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
     setUsers(prev => prev.filter(u => u.id !== userId));
+    dataStorage.deleteUser(userId);
     logAudit("Hapus User", `Menghapus akun ${target.username} (${target.fullName})`);
     showToast(`Akun ${target.fullName} berhasil dihapus dari sistem.`, "info");
   };
@@ -2062,6 +2061,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const target = breakfastOrders.find(o => o.id === orderId);
     dataStorage.deleteBreakfastOrder(orderId);
     setBreakfastOrders(prev => prev.filter(o => o.id !== orderId));
+    if (orderId.startsWith('BO-TX-')) {
+      const txId = orderId.replace('BO-TX-', '');
+      const tx = transactions.find(t => t.id === txId || t.id.includes(txId) || t.id === orderId);
+      if (tx) {
+        updateBreakfastStatus(tx.id, undefined as any);
+      }
+    } else if (target?.transactionId) {
+      updateBreakfastStatus(target.transactionId, undefined as any);
+    }
     showToast(`Pesanan sarapan ${target?.roomNumber || orderId} berhasil dihapus dari basis data.`, 'info');
     logAudit('Hapus Pesanan Sarapan', `Menghapus pesanan sarapan ID ${orderId}`);
   };
@@ -2070,8 +2078,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dataStorage.updateBreakfastOrderStatus(orderId, status);
     let target = breakfastOrders.find(o => o.id === orderId);
     if (!target && orderId.startsWith('BO-TX-')) {
-      const txIdShort = orderId.replace('BO-TX-', '');
-      const tx = transactions.find(t => t.id.includes(txIdShort) || t.id === orderId);
+      const txId = orderId.replace('BO-TX-', '');
+      const tx = transactions.find(t => t.id === txId || t.id.includes(txId) || t.id === orderId);
       if (tx) {
         target = {
           id: orderId,

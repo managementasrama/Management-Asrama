@@ -87,9 +87,43 @@ export async function testSupabaseConnection(): Promise<{ success: boolean; mess
 /**
  * Ambil seluruh database dari Supabase
  */
+/**
+ * Pemetaan record tabel users Supabase (snake_case) ke objek User aplikasi (camelCase)
+ */
+export function mapSupabaseUserToAppUser(u: any): User {
+  return {
+    id: u.id,
+    username: u.username,
+    fullName: u.full_name || u.fullName || u.username,
+    role: u.role,
+    password: u.password || '12345',
+    department: u.department || 'Operasional',
+    supervisorId: u.supervisor_id || u.supervisorId || undefined,
+    assignedBuilding: u.assigned_building || u.assignedBuilding || 'Semua Gedung',
+    phone: u.phone || '-',
+    status: u.status || 'Aktif',
+    email: u.email || undefined,
+    isOwner: u.is_owner ?? u.isOwner ?? false,
+  };
+}
+
+/**
+ * Mengambil seluruh database dari Supabase Cloud
+ */
 export async function fetchFullDatabaseFromSupabase(): Promise<CompleteStorageDatabase | null> {
   try {
-    // 1. Coba ambil dari tabel snapshot terpadu app_database_sync
+    // 1. Ambil data users langsung dari tabel Supabase users agar selalu sinkron dengan database
+    let directUsers: User[] | null = null;
+    try {
+      const { data: uData } = await supabase.from('users').select('*');
+      if (uData && uData.length > 0) {
+        directUsers = uData.map(mapSupabaseUserToAppUser);
+      }
+    } catch (uErr) {
+      console.warn('Gagal membaca tabel users Supabase:', uErr);
+    }
+
+    // 2. Coba ambil dari tabel snapshot terpadu app_database_sync
     const { data: syncData, error: syncError } = await supabase
       .from('app_database_sync')
       .select('database_payload, updated_at')
@@ -97,10 +131,15 @@ export async function fetchFullDatabaseFromSupabase(): Promise<CompleteStorageDa
       .maybeSingle();
 
     if (!syncError && syncData && syncData.database_payload) {
-      return syncData.database_payload as CompleteStorageDatabase;
+      const payload = syncData.database_payload as CompleteStorageDatabase;
+      // Jika tabel users di Supabase memiliki data, prioritaskan agar identik dengan tabel Supabase
+      if (directUsers && directUsers.length > 0) {
+        payload.users = directUsers;
+      }
+      return payload;
     }
 
-    // 2. Jika tidak ada di app_database_sync, coba query dari masing-masing tabel relasional
+    // 3. Jika tidak ada di app_database_sync, coba query dari masing-masing tabel relasional
     const [
       usersRes,
       buildingsRes,
@@ -130,13 +169,14 @@ export async function fetchFullDatabaseFromSupabase(): Promise<CompleteStorageDa
     ]);
 
     // Jika setidaknya tabel users atau rooms ada isinya, kita konstruksi database
-    if (usersRes.data && usersRes.data.length > 0) {
+    if ((usersRes.data && usersRes.data.length > 0) || (roomsRes.data && roomsRes.data.length > 0)) {
+      const mappedUsers = (usersRes.data || []).map(mapSupabaseUserToAppUser);
       const db: CompleteStorageDatabase = {
         schemaVersion: 4,
         appName: 'SIM-Akomodasi UPT Asrama Haji Jakarta',
         exportedAt: new Date().toISOString(),
         appSettings: (settingsRes.data as any) || undefined,
-        users: (usersRes.data as any) || [],
+        users: mappedUsers.length > 0 ? mappedUsers : (directUsers || []),
         buildings: (buildingsRes.data as any) || [],
         rooms: (roomsRes.data as any) || [],
         meetingRooms: (meetingRoomsRes.data as any) || [],
@@ -224,14 +264,28 @@ async function syncIndividualTables(db: CompleteStorageDatabase) {
       role: u.role,
       password: u.password,
       department: u.department,
-      supervisor_id: u.supervisorId,
-      assigned_building: u.assignedBuilding,
-      phone: u.phone,
-      status: u.status,
-      email: u.email,
-      is_owner: u.isOwner
+      supervisor_id: u.supervisorId || null,
+      assigned_building: u.assignedBuilding || null,
+      phone: u.phone || null,
+      status: u.status || 'Aktif',
+      email: u.email || null,
+      is_owner: Boolean(u.isOwner)
     }));
     await supabase.from('users').upsert(userPayloads, { onConflict: 'id' });
+
+    // Hapus user di Supabase yang sudah dihapus di aplikasi agar data selalu identik
+    try {
+      const activeIds = db.users.map(u => u.id);
+      const { data: existingRemoteUsers } = await supabase.from('users').select('id');
+      if (existingRemoteUsers && existingRemoteUsers.length > 0) {
+        const toDeleteIds = existingRemoteUsers.map(r => r.id).filter(id => !activeIds.includes(id));
+        if (toDeleteIds.length > 0) {
+          await supabase.from('users').delete().in('id', toDeleteIds);
+        }
+      }
+    } catch (cleanErr) {
+      console.warn('Gagal membersihkan user terhapus di Supabase:', cleanErr);
+    }
   }
 
   // Simpan buildings
